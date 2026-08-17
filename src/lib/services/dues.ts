@@ -71,6 +71,7 @@ export async function listDuesForViewer(
     include: {
       tenant: { include: { house: { include: { landlord: true } }, livingSpaceType: true } },
       payments: { orderBy: { submittedAt: "desc" }, take: 1 },
+      certificate: true,
     },
   });
 

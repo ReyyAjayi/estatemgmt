@@ -8,6 +8,7 @@ import { formatNaira } from "@/lib/currency";
 import { PAYMENT_STATUS_DISPLAY } from "@/lib/payment-status";
 import { DashboardShell } from "@/components/DashboardShell";
 import { SubmitPaymentForm } from "./SubmitPaymentForm";
+import Link from "next/link";
 
 const STATUS_DISPLAY: Record<string, { label: string; className: string }> = {
   NOT_PAID: { label: "OUTSTANDING", className: "bg-red-100 text-red-800" },
@@ -51,6 +52,14 @@ export default async function TenantDashboard() {
           </span>
           <p className="mt-4 text-3xl font-semibold text-slate-900">{formatNaira(due.amount)}</p>
           <p className="text-sm text-slate-600">{year} estate due</p>
+          {due.status === "VALIDATED" && (
+            <Link
+              href="/tenant/certificate"
+              className="mt-4 inline-block rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              View certificate
+            </Link>
+          )}
         </div>
       ) : (
         <p className="mt-6 max-w-md text-slate-600">

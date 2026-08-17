@@ -104,4 +104,27 @@ No certificate/QR generation yet — a `VALIDATED` due doesn't yet produce a `Ce
 
 ---
 
+## Phase 5 — Digital Certificate (2026-08-17)
+
+Built certificate generation on validation, PDF download, and the gated QR/link verification lookup — the pieces named in `docs/phase-0-discovery.md` §8 for this phase. Security's own dedicated search/scan screen is Phase 6; this phase only wires up the verification page itself and confirms Security *can* use it once logged in.
+
+| # | Decision | Status |
+|---|---|---|
+| 34 | **A `Certificate` row is created automatically inside the same transaction that flips a `TenantDue` to `VALIDATED`** — both `validatePayment` and `recordCashPayment` now run as interactive transactions that call a shared `issueCertificate()`, rather than a separate step Admin has to trigger. There's no scenario in the current rules where a due leaves `VALIDATED` once reached (no resubmission once validated — Phase 3 decision #27), so one certificate per due for its lifetime. | Decided during build |
+| 35 | **The QR token is a separate, high-entropy opaque value from the human-readable certificate number** — `qrToken` (crypto-random, URL-safe, embedded in the QR/verify link) is the actual credential; `certificateNumber` (`CERT-{year}-{code}`) is just a label printed for humans to read or quote over the phone. Guessing a certificate number should not make guessing a QR token any easier. | Decided during build |
+| 36 | **The gated verification page (`/verify/[token]`) shows CLEAR + tenant name + house number + year only — never amounts, references, or payment method.** Matches the Phase 0 minimal-disclosure requirement for gate-adjacent lookups. Since a `Certificate` only ever exists for a `VALIDATED` due, resolving a real token always yields CLEAR; an invalid, foreign, or (for Landlord) out-of-scope token renders the same generic "not found," so a scan can't be used to probe which tokens exist or which tenants belong to which landlord. | Decided during build |
+| 37 | **Landlord verification is scoped to their own tenants; Admin and Security can resolve any certificate in the estate.** Download is narrower still: Admin any, Landlord their own tenants', Tenant their own only, and **Security can verify but never download a PDF** — this matches the Phase 0 permissions table exactly ("Security: verify only, no download"). | Confirmed (Phase 0 §6), implemented |
+| 38 | **The QR's absolute URL is derived from the incoming request's `Host`/`X-Forwarded-Proto` headers at render time**, not a configured `APP_URL` env var — one fewer setting to keep in sync across local dev and wherever this deploys later. | Decided during build |
+| 39 | **Certificates render without a chairman name/signature for now** — Phase 0 decision #8 named that as a one-time Estate-level asset, but no Admin settings screen exists yet to capture it, and building one wasn't in this phase's scope (`docs/phase-0-discovery.md` §8 names PDF/QR/verification for Phase 5, not estate settings). The `Estate.chairmanName`/`chairmanSignatureUrl` columns already exist in the schema from Phase 1, so this is a small follow-up whenever it's wanted — not a data model change. | Decided during build — flagged as a follow-up |
+
+### What was tested
+
+Full journeys were exercised against a local Postgres instance with a headless browser: a tenant's payment validated by Admin issues a certificate automatically; the tenant sees a "View certificate" link on their dashboard, an on-page QR code, and can download a PDF (verified as `application/pdf`, HTTP 200) of their own certificate; Admin's payments dashboard shows a working "Certificate" link per validated row that resolves through `/verify/[token]` showing CLEAR with no financial data; the owning Landlord can resolve the same link; a **different** Landlord gets a generic "NOT FOUND" on the verify page and a 403 attempting the PDF download directly; Security can verify (sees CLEAR) but gets a 403 on the PDF download; an anonymous request to the verify page is redirected to `/login`. 19/19 checks passed.
+
+### What's still open
+
+Security's own dedicated search/scan lookup screen (search by house number or tenant code, minimal CLEAR/NOT CLEAR result) is Phase 6, not this phase — today Security can only reach `/verify/[token]` via a link or scanned QR, with no in-app search UI yet. Chairman name/signature capture (decision #39) and proof-of-payment object storage (decision #25) remain open follow-ups.
+
+---
+
 *(Future phases append below this line, most recent first.)*

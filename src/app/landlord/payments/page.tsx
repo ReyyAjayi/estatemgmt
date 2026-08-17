@@ -46,6 +46,7 @@ export default async function LandlordPaymentsPage() {
               <th className="px-4 py-3 text-left font-medium text-slate-600">Space</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Amount</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
+              <th className="px-4 py-3 text-left font-medium text-slate-600">Certificate</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -66,12 +67,24 @@ export default async function LandlordPaymentsPage() {
                       {display.label}
                     </span>
                   </td>
+                  <td className="px-4 py-3">
+                    {due.certificate ? (
+                      <a
+                        href={`/verify/${due.certificate.qrToken}`}
+                        className="text-slate-700 underline"
+                      >
+                        View
+                      </a>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
                 </tr>
               );
             })}
             {dues.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
                   No tenants yet.
                 </td>
               </tr>

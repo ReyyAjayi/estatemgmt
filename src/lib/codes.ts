@@ -1,5 +1,5 @@
 import "server-only";
-import { randomInt } from "node:crypto";
+import { randomInt, randomBytes } from "node:crypto";
 
 // Excludes visually ambiguous characters (0/O, 1/I/L) so codes are easy to
 // read aloud or copy from a notice board without transcription errors.
@@ -28,4 +28,16 @@ export function generateTenantCode(): string {
 // share it out of band, same pattern as House/Tenant codes.
 export function generateTempPassword(): string {
   return randomCode(10);
+}
+
+// Human-facing certificate number, printed on the PDF — legible, not secret.
+export function generateCertificateNumber(year: number): string {
+  return `CERT-${year}-${randomCode(6)}`;
+}
+
+// Opaque QR token — the actual verification credential, so it needs real
+// entropy (unlike the certificate number above, which is just a label).
+// URL-safe since it's embedded directly in the /verify/[token] path.
+export function generateQrToken(): string {
+  return randomBytes(20).toString("base64url");
 }

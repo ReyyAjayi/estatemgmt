@@ -4,6 +4,7 @@ import { Role } from "@/generated/prisma/enums";
 import type { PaymentStatus } from "@/generated/prisma/enums";
 import type { SessionPayload } from "@/lib/session";
 import { ownLandlordId } from "./viewer-scope";
+import { issueCertificate } from "./certificates";
 
 const PAYMENT_HISTORY_INCLUDE = {
   tenantDue: { include: { tenant: { include: { house: { include: { landlord: true } }, livingSpaceType: true } } } },
@@ -74,13 +75,17 @@ export async function validatePayment(session: SessionPayload, paymentId: string
   assertAdmin(session);
   const payment = await getPendingPaymentOrThrow(paymentId);
 
-  await prisma.$transaction([
-    prisma.payment.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.payment.update({
       where: { id: paymentId },
       data: { status: "VALIDATED", notes, validatedById: session.userId, validatedAt: new Date() },
-    }),
-    prisma.tenantDue.update({ where: { id: payment.tenantDueId }, data: { status: "VALIDATED" } }),
-  ]);
+    });
+    const due = await tx.tenantDue.update({
+      where: { id: payment.tenantDueId },
+      data: { status: "VALIDATED" },
+    });
+    await issueCertificate(tx, { tenantDueId: due.id, year: due.year, issuedById: session.userId });
+  });
 }
 
 export async function rejectPayment(session: SessionPayload, paymentId: string, notes: string) {
@@ -114,8 +119,8 @@ export async function recordCashPayment(session: SessionPayload, tenantDueId: st
     throw new Error("A bank transfer is already awaiting review for this due — validate or reject it first.");
   }
 
-  await prisma.$transaction([
-    prisma.payment.create({
+  await prisma.$transaction(async (tx) => {
+    await tx.payment.create({
       data: {
         tenantDueId,
         method: "CASH",
@@ -124,9 +129,10 @@ export async function recordCashPayment(session: SessionPayload, tenantDueId: st
         validatedById: session.userId,
         validatedAt: new Date(),
       },
-    }),
-    prisma.tenantDue.update({ where: { id: tenantDueId }, data: { status: "VALIDATED" } }),
-  ]);
+    });
+    await tx.tenantDue.update({ where: { id: tenantDueId }, data: { status: "VALIDATED" } });
+    await issueCertificate(tx, { tenantDueId, year: due.year, issuedById: session.userId });
+  });
 }
 
 export type PaymentHistoryFilters = {

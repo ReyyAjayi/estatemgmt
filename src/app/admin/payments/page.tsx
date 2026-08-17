@@ -195,6 +195,7 @@ export default async function AdminPaymentsPage({
               <th className="px-4 py-3 text-left font-medium text-slate-600">Amount</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Proof</th>
+              <th className="px-4 py-3 text-left font-medium text-slate-600">Certificate</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -231,12 +232,24 @@ export default async function AdminPaymentsPage({
                       <span className="text-slate-400">—</span>
                     )}
                   </td>
+                  <td className="px-4 py-3">
+                    {due.certificate ? (
+                      <a
+                        href={`/verify/${due.certificate.qrToken}`}
+                        className="text-slate-700 underline"
+                      >
+                        View
+                      </a>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
                 </tr>
               );
             })}
             {dues.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
                   No tenants match these filters.
                 </td>
               </tr>

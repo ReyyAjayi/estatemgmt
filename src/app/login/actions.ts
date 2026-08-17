@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { createSession } from "@/lib/session";
 import { isLocked, nextLockState } from "@/lib/lockout";
+import { checkLoginRateLimit, getClientIp } from "@/lib/rate-limit";
 import { Role } from "@/generated/prisma/enums";
 import { roleHome } from "@/lib/auth-guard";
 
@@ -13,6 +14,7 @@ export type LoginState = { error: string | null };
 
 const GENERIC_ERROR = "Incorrect details. Please check and try again.";
 const LOCKED_ERROR = "Too many failed attempts. Please try again in 15 minutes.";
+const RATE_LIMITED_ERROR = "Too many login attempts from this connection. Please wait a few minutes and try again.";
 
 const staffSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -23,6 +25,10 @@ export async function staffLogin(
   _prevState: LoginState,
   formData: FormData
 ): Promise<LoginState> {
+  if (!checkLoginRateLimit(`staff:${await getClientIp()}`)) {
+    return { error: RATE_LIMITED_ERROR };
+  }
+
   const parsed = staffSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -69,6 +75,10 @@ export async function tenantLogin(
   _prevState: LoginState,
   formData: FormData
 ): Promise<LoginState> {
+  if (!checkLoginRateLimit(`tenant:${await getClientIp()}`)) {
+    return { error: RATE_LIMITED_ERROR };
+  }
+
   const parsed = tenantSchema.safeParse({
     houseCode: formData.get("houseCode"),
     tenantCode: formData.get("tenantCode"),

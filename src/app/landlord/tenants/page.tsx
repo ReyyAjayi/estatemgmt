@@ -23,7 +23,7 @@ export default async function LandlordTenantsPage() {
       <p className="mt-1 max-w-2xl text-slate-600">Tenants across your houses.</p>
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
+        <table className="min-w-full divide-y divide-slate-200 text-sm whitespace-nowrap">
           <thead className="bg-slate-50">
             <tr>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Tenant</th>

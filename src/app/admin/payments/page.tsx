@@ -186,8 +186,23 @@ export default async function AdminPaymentsPage({
         )}
       </form>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
+      <div className="mt-4">
+        <a
+          href={`/api/admin/payments/export?${new URLSearchParams({
+            year: String(year),
+            ...(houseId ? { houseId } : {}),
+            ...(landlordId ? { landlordId } : {}),
+            ...(livingSpaceTypeId ? { livingSpaceTypeId } : {}),
+            ...(status ? { status } : {}),
+          }).toString()}`}
+          className="text-sm font-medium text-slate-700 underline hover:text-slate-900"
+        >
+          Export CSV ({dues.length} row{dues.length === 1 ? "" : "s"})
+        </a>
+      </div>
+
+      <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table className="min-w-full divide-y divide-slate-200 text-sm whitespace-nowrap">
           <thead className="bg-slate-50">
             <tr>
               <th className="px-4 py-3 text-left font-medium text-slate-600">House</th>

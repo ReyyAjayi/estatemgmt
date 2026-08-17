@@ -168,4 +168,26 @@ Per the roadmap, **Phase 8 — Polish & hardening** is next: mobile UX pass acro
 
 ---
 
+## Phase 8 — Polish & Hardening (2026-08-17)
+
+Built the five items named in `docs/phase-0-discovery.md` §8 for the final roadmap phase: mobile UX pass, CSV export, login rate-limiting, an error-message pass, and deployment finalization. This phase touched many existing pages but added no new product behavior — everything below is either a safety net or a reporting/ops convenience.
+
+| # | Decision | Status |
+|---|---|---|
+| 47 | **A per-IP, in-memory login rate limiter (`src/lib/rate-limit.ts`) sits on top of the existing per-account/per-house lockout**, closing a real gap the mobile/polish pass surfaced: the account lockout only engages once an attempt matches a *real* email or House Code, so guessing against ones that don't exist had zero throttling. Capped at 20 attempts per 15 minutes per IP, checked before any database lookup. **Explicitly flagged as not distributed-safe** — it's per server process, so on multiple serverless instances the limit is "per instance," not global. Same honest-stopgap pattern as the local-disk proof storage: fine at single-estate scale, worth revisiting (a platform-level limiter like Vercel Firewall or Upstash Ratelimit) before high-traffic production use. | Decided during build |
+| 48 | **A global `error.tsx` and `not-found.tsx` replace Next's default crash/404 screens** with a friendly message and a way back. Verified against a *real* unhandled failure (Postgres stopped mid-request), not just a code review — confirms the boundary actually catches what it's meant to catch. | Decided during build |
+| 49 | **CSV export is Admin-only**, respects the same year/house/landlord/space-type/status filters as the `/admin/payments` dashboard table, and streams plain numeric amounts (not currency-formatted strings) so the export is directly summable in a spreadsheet. No Landlord/Tenant equivalent was added — Landlord's read-only dashboard was judged sufficient for their scope, and can gain export later if asked. | Decided during build |
+| 50 | **The mobile pass found one real, fixable issue**: on narrow viewports, data tables were wrapping cell text into multiple lines instead of letting their `overflow-x-auto` wrapper scroll horizontally, producing very tall, hard-to-scan tables. Fixed by adding `whitespace-nowrap` to all 11 table instances across the app — cells now keep their natural width and the existing scroll wrapper does its job. Everything else (stat tile grids, filter forms, nav, forms) already held up at a 375px viewport with no changes needed, since Tailwind's mobile-first defaults were used consistently from Phase 1 onward. | Decided during build |
+| 51 | **"Deployment finalization" produced a deployment guide (`docs/deployment.md`), not an actual deploy** — this environment has no hosting/database/storage credentials to deploy with, and Phase 0's own recommendation (Vercel + managed Postgres + object storage) requires accounts only the Product Owner can provision. The guide covers the concrete steps, a new `db:migrate:deploy` script for production-safe migrations, and re-surfaces the two still-open blockers (proof storage #25, chairman signature #39) plus the rate-limiter caveat (#47) as things to resolve before going live. | Decided during build — deploy itself deferred to PO |
+
+### What was tested
+
+Full journeys were exercised against a local Postgres instance with a headless browser: a bogus route renders the custom 404 page with correct status code; the Admin CSV export downloads with correct headers, filtering, and header row, and is blocked (403) for a Landlord and (401) for an anonymous request hitting the route directly; 21 rapid login attempts against a nonexistent email from one client get the normal generic error for the first ~19 and the rate-limit message once the cap is hit, without ever revealing that the account doesn't exist; and — the one that needed a real fault, not a mock — stopping Postgres mid-session and hitting a DB-dependent page renders the custom error boundary instead of a raw crash screen, confirmed before restarting Postgres. 14/14 checks passed. The mobile-viewport screenshots across all four roles' key screens were visually reviewed at 375px width; the only issue found (table wrapping) was fixed and re-verified.
+
+### What's still open
+
+This was the last phase on the original Phase 0 roadmap. What remains is exactly what's been flagged all along: **proof-of-payment object storage** (#25) and **chairman name/signature capture** (#39) both need a Product Owner decision before a real deploy, and the **in-memory rate limiter** (#47) is worth revisiting if traffic grows past single-estate scale. Any further work (new features, a second estate, deeper reporting) is a new phase, not a continuation of this roadmap.
+
+---
+
 *(Future phases append below this line, most recent first.)*

@@ -4,6 +4,7 @@ import { Role } from "@/generated/prisma/enums";
 import type { DueStatus } from "@/generated/prisma/enums";
 import type { SessionPayload } from "@/lib/session";
 import { ownLandlordId } from "./viewer-scope";
+import { isOverdue } from "@/lib/promise-status";
 
 // Idempotent: creates a TenantDue (with the fee amount snapshotted, per
 // docs/phase-0-discovery.md §5) for every active tenant that doesn't already
@@ -94,6 +95,7 @@ export async function getPaymentDashboardTotals(session: SessionPayload, year: n
   const paid = dues.filter((d) => d.status === "VALIDATED").length;
   const submitted = dues.filter((d) => d.status === "PAYMENT_SUBMITTED").length;
   const outstanding = dues.filter((d) => d.status === "NOT_PAID" || d.status === "REJECTED").length;
+  const overdue = dues.filter(isOverdue).length;
   const expectedCollection = dues.reduce((sum, d) => sum + d.amount, 0);
   const actualCollection = dues
     .filter((d) => d.status === "VALIDATED")
@@ -104,10 +106,35 @@ export async function getPaymentDashboardTotals(session: SessionPayload, year: n
     paid,
     submitted,
     outstanding,
+    overdue,
     expectedCollection,
     actualCollection,
     tenantsWithoutDue: totalActiveTenants - dues.length,
   };
+}
+
+// Tenant-only, own due, and only while it's still outstanding — matches the
+// "shown when outstanding" screen note in docs/phase-0-discovery.md §7.
+export async function setExpectedPaymentDate(
+  session: SessionPayload,
+  tenantDueId: string,
+  date: Date | null
+) {
+  if (session.role !== Role.TENANT || !session.tenantId) {
+    throw new Error("Only a tenant can set their own expected payment date.");
+  }
+  const due = await prisma.tenantDue.findUniqueOrThrow({ where: { id: tenantDueId } });
+  if (due.tenantId !== session.tenantId) {
+    throw new Error("You can only update your own due.");
+  }
+  if (due.status !== "NOT_PAID" && due.status !== "REJECTED") {
+    throw new Error("You can only provide an expected payment date while your due is outstanding.");
+  }
+
+  return prisma.tenantDue.update({
+    where: { id: tenantDueId },
+    data: { expectedPaymentDate: date },
+  });
 }
 
 // Dues Admin can record a cash payment against — anything not already paid

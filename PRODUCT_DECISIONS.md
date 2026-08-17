@@ -147,4 +147,25 @@ Phase 0's original roadmap for Security ends here (§8) — the remaining phases
 
 ---
 
+## Phase 7 — Expected Payment Date (2026-08-17)
+
+Built promise-to-pay capture and the "overdue vs. promised" flag named in `docs/phase-0-discovery.md` §8. `TenantDue.expectedPaymentDate` already existed in the schema since Phase 1 — this phase is entirely UI + a thin service function on top of it.
+
+| # | Decision | Status |
+|---|---|---|
+| 43 | **"Promise status" is a derived display value, not a new `DueStatus`.** Whether a due is "No promise given," "Promised by X," or "Overdue — promised X" is computed on the fly from `status` + `expectedPaymentDate` (`src/lib/promise-status.ts`), rather than adding new enum values or a stored flag. Nothing else in the system (dues generation, payment validation, certificates) needed to know about promises, so keeping it a pure display layer avoided touching any of that already-tested logic. | Decided during build |
+| 44 | **A due with no expected payment date at all counts as overdue**, same as one whose promised date has passed — both mean "no valid promise is currently covering this outstanding due," which is the actionable signal for Admin/Landlord. Only a promise dated today-or-later removes a due from the overdue count. | Decided during build |
+| 45 | **Tenants can only set today-or-future dates**, validated server-side against the calendar date (not a timestamp comparison) to avoid an off-by-one near midnight in timezones ahead of UTC. A rejected submission leaves the previous valid promise (if any) in place rather than clearing it. | Decided during build |
+| 46 | **No dedicated "promised vs. overdue" filter was added to the Admin payments filter bar** — the existing Status filter plus the new Promise column and Overdue stat tile were judged sufficient for MVP scale; a filter can follow if Admin finds themselves scrolling past a lot of rows. | Decided during build — flagged as a possible follow-up |
+
+### What was tested
+
+Full journeys were exercised against a local Postgres instance with a headless browser: an outstanding tenant sets a future date and sees a "Promised by X" badge on their own dashboard, on the Admin payments table (filtered to their house), and on their Landlord's read-only view; attempting to save a past date is rejected with a validation error and the prior valid promise is preserved; a second tenant who never sets a date shows "No promise given" and is counted in the new Overdue stat tile; a Landlord session cannot reach the promise-date form at all (redirected away from `/tenant`, which is Tenant-only). 12/12 + 1/1 checks passed.
+
+### What's still open
+
+Per the roadmap, **Phase 8 — Polish & hardening** is next: mobile UX pass across all roles, CSV export, login rate-limiting, an error-message pass, and deployment finalization. Proof-of-payment object storage (#25) and chairman name/signature capture (#39) remain open pre-deployment follow-ups; deployment finalization in Phase 8 is the natural point to resolve both.
+
+---
+
 *(Future phases append below this line, most recent first.)*

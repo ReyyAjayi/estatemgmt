@@ -6,8 +6,10 @@ import { ensureDuesForYear, getDueForTenantYear } from "@/lib/services/dues";
 import { listPaymentHistoryForViewer } from "@/lib/services/payments";
 import { formatNaira } from "@/lib/currency";
 import { PAYMENT_STATUS_DISPLAY } from "@/lib/payment-status";
+import { describePromiseStatus } from "@/lib/promise-status";
 import { DashboardShell } from "@/components/DashboardShell";
 import { SubmitPaymentForm } from "./SubmitPaymentForm";
+import { ExpectedPaymentDateForm } from "./ExpectedPaymentDateForm";
 import Link from "next/link";
 
 const STATUS_DISPLAY: Record<string, { label: string; className: string }> = {
@@ -35,6 +37,7 @@ export default async function TenantDashboard() {
   const due = await getDueForTenantYear(tenant.id, year);
   const status = due ? STATUS_DISPLAY[due.status] : null;
   const canSubmit = due && (due.status === "NOT_PAID" || due.status === "REJECTED");
+  const promise = due ? describePromiseStatus(due) : null;
   const history = await listPaymentHistoryForViewer(session);
 
   return (
@@ -52,6 +55,13 @@ export default async function TenantDashboard() {
           </span>
           <p className="mt-4 text-3xl font-semibold text-slate-900">{formatNaira(due.amount)}</p>
           <p className="text-sm text-slate-600">{year} estate due</p>
+          {promise && (
+            <span
+              className={`mt-3 inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${promise.className}`}
+            >
+              {promise.label}
+            </span>
+          )}
           {due.status === "VALIDATED" && (
             <Link
               href="/tenant/certificate"
@@ -77,6 +87,18 @@ export default async function TenantDashboard() {
           <div className="mt-3">
             <SubmitPaymentForm />
           </div>
+        </div>
+      )}
+
+      {canSubmit && (
+        <div className="mt-4 max-w-md rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="text-sm font-semibold text-slate-900">Not ready yet?</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Let the estate know when you plan to pay.
+          </p>
+          <ExpectedPaymentDateForm
+            currentDate={due?.expectedPaymentDate ? due.expectedPaymentDate.toISOString().slice(0, 10) : null}
+          />
         </div>
       )}
 

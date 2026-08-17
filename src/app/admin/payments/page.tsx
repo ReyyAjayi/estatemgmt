@@ -12,6 +12,7 @@ import { listLandlords } from "@/lib/services/landlords";
 import { listLivingSpaceTypes } from "@/lib/services/living-space-types";
 import { formatNaira } from "@/lib/currency";
 import { DUE_STATUS_DISPLAY, DUE_STATUS_OPTIONS } from "@/lib/due-status";
+import { describePromiseStatus } from "@/lib/promise-status";
 import { DashboardShell } from "@/components/DashboardShell";
 import { StatTile } from "@/components/StatTile";
 import { PaymentsSubNav } from "@/components/PaymentsSubNav";
@@ -66,6 +67,7 @@ export default async function AdminPaymentsPage({
         <StatTile label="Paid" value={totals.paid} />
         <StatTile label="Payment submitted" value={totals.submitted} />
         <StatTile label="Outstanding" value={totals.outstanding} />
+        <StatTile label="Overdue" value={totals.overdue} />
         <StatTile label="Expected collection" value={formatNaira(totals.expectedCollection)} />
         <StatTile label="Actual collection" value={formatNaira(totals.actualCollection)} />
       </div>
@@ -194,6 +196,7 @@ export default async function AdminPaymentsPage({
               <th className="px-4 py-3 text-left font-medium text-slate-600">Space</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Amount</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
+              <th className="px-4 py-3 text-left font-medium text-slate-600">Promise</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Proof</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Certificate</th>
             </tr>
@@ -201,6 +204,7 @@ export default async function AdminPaymentsPage({
           <tbody className="divide-y divide-slate-100">
             {dues.map((due) => {
               const display = DUE_STATUS_DISPLAY[due.status];
+              const promise = describePromiseStatus(due);
               const latestPayment = due.payments[0];
               return (
                 <tr key={due.id}>
@@ -217,6 +221,17 @@ export default async function AdminPaymentsPage({
                     >
                       {display.label}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {promise ? (
+                      <span
+                        className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${promise.className}`}
+                      >
+                        {promise.label}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {latestPayment?.proofFileUrl ? (
@@ -249,7 +264,7 @@ export default async function AdminPaymentsPage({
             })}
             {dues.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={9} className="px-4 py-6 text-center text-slate-500">
                   No tenants match these filters.
                 </td>
               </tr>

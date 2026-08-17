@@ -48,6 +48,16 @@ export default async function AdminDashboard() {
           .
         </p>
       )}
+      {totals.overdue > 0 && (
+        <p className="mt-1 max-w-2xl text-red-700">
+          {totals.overdue} of those {totals.overdue === 1 ? "is" : "are"} overdue with no valid
+          payment promise —{" "}
+          <a href="/admin/payments" className="underline">
+            see who
+          </a>
+          .
+        </p>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatTile label="Houses" value={houses.length} href="/admin/houses" />

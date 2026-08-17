@@ -6,7 +6,12 @@ The core objective: let estate management see who has paid and who hasn't, so th
 
 ## Project status
 
-**Phase 0 — Discovery & Architecture** and **Phase 1 — Foundation** are complete. Phase 1 delivered a working authentication skeleton: estate self-registration, staff (Admin/Landlord/Security) password login, tenant House Code + Tenant Code login, role-protected placeholder dashboards for all four roles, and login lockout after repeated failures. No estate/tenant/payment features yet — that starts in Phase 2.
+**Phase 0 — Discovery & Architecture**, **Phase 1 — Foundation**, and **Phase 2 — Core Estate Data** are complete.
+
+- Phase 1: estate self-registration, staff (Admin/Landlord/Security) password login, tenant House Code + Tenant Code login, role-protected dashboards, login lockout.
+- Phase 2: Admin & Landlord CRUD for houses, tenants, living-space types and fees; House Code/Tenant Code generation and display; Landlord-initiated tenant deactivation requests with Admin confirmation.
+
+No payment submission, validation, or defaulter dashboard yet — that's Phase 3, the phase that delivers the core "who has paid" objective from the product spec.
 
 - [`docs/phase-0-discovery.md`](docs/phase-0-discovery.md) — full requirements analysis, architecture, data model, roles/permissions, screens, roadmap, and open decisions.
 - [`PRODUCT_DECISIONS.md`](PRODUCT_DECISIONS.md) — running log of significant product/technical decisions.
@@ -28,7 +33,9 @@ npm run dev
 
 Visit `http://localhost:3000`. Since no estate exists yet, you'll land on **Set up your estate** — this one-time form creates the estate and your Admin account together.
 
-To test the Landlord, Tenant and Security logins (which are normally created by an Admin in-app — a Phase 2 feature not yet built), seed some dev fixtures **after** completing the setup step above:
+From the Admin dashboard you can now add living-space types & fees, landlords (a one-time temporary password is shown for you to share), houses (assigned to a landlord, with an auto-generated House Code), and tenants (with an auto-generated Tenant Code) — or sign in as a Landlord to do the equivalent for their own houses/tenants.
+
+To quickly populate a Security account too (Security has no self-service creation UI, same as Landlord — both are Admin-created in-app), seed a dev fixture **after** completing the setup step above:
 
 ```bash
 npm run db:seed

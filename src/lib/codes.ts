@@ -22,3 +22,10 @@ export function generateHouseCode(): string {
 export function generateTenantCode(): string {
   return randomCode(8);
 }
+
+// Initial passwords for Landlord/Security accounts that Admin creates
+// in-app (see docs/phase-0-discovery.md §10.7) — shown once so Admin can
+// share it out of band, same pattern as House/Tenant codes.
+export function generateTempPassword(): string {
+  return randomCode(10);
+}

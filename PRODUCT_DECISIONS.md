@@ -47,4 +47,21 @@ Full journeys were exercised against a local Postgres instance with a headless b
 
 ---
 
+## Phase 2 — Core Estate Data (2026-08-17)
+
+Built Admin & Landlord CRUD for houses, tenants, living-space types and fees — the data Phase 3's payment/defaulter dashboard will run on. All authorization is enforced in a service layer (`src/lib/services/*`), not just by which page links where, per the Phase 0 architecture principle: every service function re-derives the viewer's scope from their session, so a Landlord can never read or write another landlord's houses/tenants even if they call a server action directly.
+
+| # | Decision | Status |
+|---|---|---|
+| 20 | **Landlord and Security initial passwords are auto-generated**, not typed by Admin, and shown once after creation for Admin to copy and share out of band — same pattern as House/Tenant codes, and avoids weak Admin-chosen passwords. Admin can regenerate a new one at any time ("Reset password"). | Decided during build |
+| 21 | **Admin can create/edit tenants directly (any house), not only Landlords** — this was already in the Phase 0 permissions table (§6) but is worth restating: both roles share the same `createTenant`/`createHouse` service functions, which branch on session role internally rather than having separate Admin/Landlord code paths. | Confirmed (Phase 0 §6), implemented |
+| 22 | **Tenant deactivation is two-step in the UI**: Landlord's "Request deactivation" only ever sets a request flag; Admin's tenant list shows a "Deactivation requested by landlord" badge with **Deactivate** and **Dismiss request** actions. Deactivating clears the request flag and sets `moveOutDate` to today. Admin can also deactivate a tenant with no prior request. | Decided during build |
+| 23 | **Fee amounts are entered in the UI as whole Naira** (e.g. "20000") and converted to kobo for storage (`src/lib/currency.ts`); display does the reverse. This is purely a UI/storage boundary, not a currency decision — NGN-only remains as decided in Phase 0. | Decided during build |
+
+### What was tested
+
+Full CRUD + permission-boundary journeys were exercised against a local Postgres instance with a headless browser: Admin adding a living-space type and fee, creating a Landlord (capturing the one-time temp password), creating a House assigned to that Landlord (capturing the House Code), creating a Tenant in that house (capturing the Tenant Code); the new Landlord logging in with the temp password and seeing only their own house; a Landlord being bounced out of `/admin/*`; a Landlord creating their own house and tenant; a *different* seeded Landlord confirmed **not** able to see the new Landlord's houses (the core isolation guarantee); a Landlord requesting deactivation of a tenant; Admin seeing the pending request and deactivating the tenant, whose status then shows Inactive. All 18 checks passed.
+
+---
+
 *(Future phases append below this line, most recent first.)*

@@ -83,4 +83,25 @@ Full payment-submission and dashboard journeys were exercised against a local Po
 
 ---
 
+## Phase 4 — Payment Validation (2026-08-17)
+
+Built the Admin review queue (validate/reject submitted bank-transfer payments with notes), cash payment recording, and payment history views for all three roles. Together with Phase 3, this closes the loop: a tenant submits, Admin decides, and everyone sees the outcome.
+
+| # | Decision | Status |
+|---|---|---|
+| 30 | **Cash payments are recorded and validated by Admin in one step** — there's no separate review stage, since Admin is confirming cash they're holding in person. Blocked while a bank-transfer submission is already awaiting review for the same due, so Admin resolves that one first rather than creating two competing payment records for the same year. | Decided during build |
+| 31 | **Rejecting a payment requires a note; validating does not.** The tenant needs to know what to fix before resubmitting (per Phase 0 §2.4's resubmission flow); a validation is self-explanatory. The note is shown to the tenant on their dashboard's payment history. | Decided during build |
+| 32 | **Payment history is scoped identically to the existing dues/payments views**: Admin sees everything (filterable by year/house/landlord/status), Landlord sees only their own tenants (read-only, no filters — same pattern as their Payments dashboard), Tenant sees only their own payment attempts. Reuses `ownLandlordId`/session-scoping already established in Phase 2-3, not a new authorization model. | Decided during build |
+| 33 | **The Admin Payments dashboard, review queue, cash form and history page share an in-page sub-nav** (`PaymentsSubNav`) rather than adding four new top-level nav items — keeps the main nav from growing every phase. The review queue's pending count surfaces as a badge on that tab and as a line on the Admin home dashboard, so a backlog is never silently missed. | Decided during build |
+
+### What was tested
+
+Full validation journeys were exercised against a local Postgres instance with a headless browser: two tenants submitting bank-transfer payments, Admin validating one and rejecting the other with a reason; the rejected tenant seeing the reason on their dashboard and successfully resubmitting; Admin recording a cash payment for a third tenant and it immediately showing as paid; the Admin payments dashboard and history page reflecting all three outcomes correctly when filtered to the test house; the Landlord's read-only history view showing the same three outcomes scoped to their own tenants only. Also re-confirmed the authorization boundary from Phase 0 §"Landlord over-reach": a Landlord is redirected away from `/admin/payments/review`, `/admin/payments/cash` and `/admin/payments/history` even when navigating there directly by URL. 27/27 + 4/4 checks passed.
+
+### What's still open
+
+No certificate/QR generation yet — a `VALIDATED` due doesn't yet produce a `Certificate` row. That's Phase 5 per the roadmap (`docs/phase-0-discovery.md` §8), along with security gate lookup. Proof-of-payment storage remains on local disk (decision #25, still needs your input before deployment).
+
+---
+
 *(Future phases append below this line, most recent first.)*

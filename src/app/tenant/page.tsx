@@ -3,7 +3,9 @@ import { getEstate } from "@/lib/estate";
 import { prisma } from "@/lib/prisma";
 import { Role } from "@/generated/prisma/enums";
 import { ensureDuesForYear, getDueForTenantYear } from "@/lib/services/dues";
+import { listPaymentHistoryForViewer } from "@/lib/services/payments";
 import { formatNaira } from "@/lib/currency";
+import { PAYMENT_STATUS_DISPLAY } from "@/lib/payment-status";
 import { DashboardShell } from "@/components/DashboardShell";
 import { SubmitPaymentForm } from "./SubmitPaymentForm";
 
@@ -32,6 +34,7 @@ export default async function TenantDashboard() {
   const due = await getDueForTenantYear(tenant.id, year);
   const status = due ? STATUS_DISPLAY[due.status] : null;
   const canSubmit = due && (due.status === "NOT_PAID" || due.status === "REJECTED");
+  const history = await listPaymentHistoryForViewer(session);
 
   return (
     <DashboardShell estateName={estate?.name ?? ""} role="TENANT" personName={tenant.fullName}>
@@ -65,6 +68,38 @@ export default async function TenantDashboard() {
           <div className="mt-3">
             <SubmitPaymentForm />
           </div>
+        </div>
+      )}
+
+      {history.length > 0 && (
+        <div className="mt-8 max-w-md">
+          <h2 className="text-sm font-semibold text-slate-900">Payment history</h2>
+          <ul className="mt-2 space-y-2">
+            {history.map((payment) => {
+              const display = PAYMENT_STATUS_DISPLAY[payment.status];
+              return (
+                <li key={payment.id} className="rounded-lg border border-slate-200 bg-white p-4">
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${display.className}`}
+                    >
+                      {display.label}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      {payment.submittedAt.toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600">
+                    {payment.tenantDue.year} · {payment.method === "BANK_TRANSFER" ? "Bank transfer" : "Cash"} ·{" "}
+                    {formatNaira(payment.tenantDue.amount)}
+                  </p>
+                  {payment.status === "REJECTED" && payment.notes && (
+                    <p className="mt-1 text-sm text-red-700">Reason: {payment.notes}</p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
     </DashboardShell>

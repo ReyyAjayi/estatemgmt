@@ -1,41 +1,24 @@
 import { requireRole } from "@/lib/auth-guard";
 import { Role } from "@/generated/prisma/enums";
 import { getEstate } from "@/lib/estate";
-import { ensureDuesForYear, getPaymentDashboardTotals, listDuesForViewer } from "@/lib/services/dues";
+import { listPaymentHistoryForViewer } from "@/lib/services/payments";
 import { formatNaira } from "@/lib/currency";
-import { DUE_STATUS_DISPLAY } from "@/lib/due-status";
+import { PAYMENT_STATUS_DISPLAY } from "@/lib/payment-status";
 import { DashboardShell } from "@/components/DashboardShell";
-import { StatTile } from "@/components/StatTile";
 import { PaymentsSubNav } from "@/components/PaymentsSubNav";
 
-export default async function LandlordPaymentsPage() {
+export default async function LandlordPaymentHistoryPage() {
   const session = await requireRole([Role.LANDLORD]);
   const estate = await getEstate();
-  const year = new Date().getFullYear();
-
-  if (estate) {
-    await ensureDuesForYear(estate.id, year);
-  }
-
-  const [totals, dues] = await Promise.all([
-    getPaymentDashboardTotals(session, year),
-    listDuesForViewer(session, year),
-  ]);
+  const payments = await listPaymentHistoryForViewer(session);
 
   return (
     <DashboardShell estateName={estate?.name ?? ""} role="LANDLORD">
-      <h1 className="text-2xl font-semibold text-slate-900">Payments</h1>
+      <h1 className="text-2xl font-semibold text-slate-900">Payment history</h1>
       <p className="mt-1 max-w-2xl text-slate-600">
-        Payment status for your tenants, {year}.
+        Every payment attempt for your tenants — bank transfer or cash.
       </p>
-      <PaymentsSubNav role="LANDLORD" active="dashboard" />
-
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatTile label="Active tenants" value={totals.totalActiveTenants} />
-        <StatTile label="Paid" value={totals.paid} />
-        <StatTile label="Payment submitted" value={totals.submitted} />
-        <StatTile label="Outstanding" value={totals.outstanding} />
-      </div>
+      <PaymentsSubNav role="LANDLORD" active="history" />
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -43,22 +26,25 @@ export default async function LandlordPaymentsPage() {
             <tr>
               <th className="px-4 py-3 text-left font-medium text-slate-600">House</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Tenant</th>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">Space</th>
+              <th className="px-4 py-3 text-left font-medium text-slate-600">Method</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Amount</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
+              <th className="px-4 py-3 text-left font-medium text-slate-600">Submitted</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {dues.map((due) => {
-              const display = DUE_STATUS_DISPLAY[due.status];
+            {payments.map((payment) => {
+              const display = PAYMENT_STATUS_DISPLAY[payment.status];
               return (
-                <tr key={due.id}>
+                <tr key={payment.id}>
                   <td className="px-4 py-3 font-medium text-slate-900">
-                    {due.tenant.house.houseNumber}
+                    {payment.tenantDue.tenant.house.houseNumber}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{due.tenant.fullName}</td>
-                  <td className="px-4 py-3 text-slate-600">{due.tenant.livingSpaceType.name}</td>
-                  <td className="px-4 py-3 text-slate-600">{formatNaira(due.amount)}</td>
+                  <td className="px-4 py-3 text-slate-600">{payment.tenantDue.tenant.fullName}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {payment.method === "BANK_TRANSFER" ? "Bank transfer" : "Cash"}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{formatNaira(payment.tenantDue.amount)}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${display.className}`}
@@ -66,13 +52,16 @@ export default async function LandlordPaymentsPage() {
                       {display.label}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {payment.submittedAt.toLocaleDateString()}
+                  </td>
                 </tr>
               );
             })}
-            {dues.length === 0 && (
+            {payments.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
-                  No tenants yet.
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                  No payment attempts yet.
                 </td>
               </tr>
             )}

@@ -109,6 +109,25 @@ export async function getPaymentDashboardTotals(session: SessionPayload, year: n
   };
 }
 
+// Dues Admin can record a cash payment against — anything not already paid
+// or already awaiting review for a bank-transfer submission (see
+// recordCashPayment in payments.ts, which also enforces this server-side).
+export async function listCashEligibleDues(estateId: string, year: number) {
+  const dues = await prisma.tenantDue.findMany({
+    where: {
+      year,
+      status: { in: ["NOT_PAID", "REJECTED"] },
+      tenant: { status: "active", house: { estateId } },
+    },
+    include: { tenant: { include: { house: { include: { landlord: true } }, livingSpaceType: true } } },
+  });
+
+  return dues.sort((a, b) =>
+    a.tenant.house.houseNumber.localeCompare(b.tenant.house.houseNumber) ||
+    a.tenant.fullName.localeCompare(b.tenant.fullName)
+  );
+}
+
 export function getDueForTenantYear(tenantId: string, year: number) {
   return prisma.tenantDue.findUnique({
     where: { tenantId_year: { tenantId, year } },

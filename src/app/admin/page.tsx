@@ -39,6 +39,15 @@ export default async function AdminDashboard() {
         </a>{" "}
         page.
       </p>
+      {totals.submitted > 0 && (
+        <p className="mt-1 max-w-2xl text-amber-700">
+          {totals.submitted} payment{totals.submitted === 1 ? "" : "s"} waiting for review —{" "}
+          <a href="/admin/payments/review" className="underline">
+            go to the review queue
+          </a>
+          .
+        </p>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatTile label="Houses" value={houses.length} href="/admin/houses" />

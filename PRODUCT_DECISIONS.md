@@ -30,4 +30,21 @@ Full analysis in [`docs/phase-0-discovery.md`](docs/phase-0-discovery.md). All d
 
 ---
 
+## Phase 1 — Foundation (2026-08-17)
+
+Built the authentication/authorization skeleton: Next.js + Prisma project scaffold, the full Phase 0 data model as migrations, estate self-registration, staff (Admin/Landlord/Security) password login, tenant House Code + Tenant Code login, role-protected placeholder dashboards, and login lockout. No estate/tenant/payment management UI yet — that's Phase 2+.
+
+| # | Decision | Status |
+|---|---|---|
+| 16 | **No NextAuth/Auth.js** — session handling is a small hand-rolled module (`src/lib/session.ts`) using signed JWT cookies via `jose`, with `bcryptjs` for password hashing. Chosen for transparency and to avoid chasing framework-compatibility issues on Next.js 16, which is days old and just renamed core primitives (`middleware` → `proxy`). Not a reversal of a confirmed decision — Phase 0's decision #13 named the framework/DB/ORM, not a specific auth library. | Decided during build |
+| 17 | **Route protection lives in each page's server code (`requireRole()`), not in `proxy.ts`.** The proxy file does a cheap "is there a session cookie at all" redirect for unauthenticated requests only; it is explicitly not trusted for authorization, matching Next.js's own guidance and the Phase 0 principle of enforcing access at the backend, not the routing layer. | Decided during build |
+| 18 | **House Code + Tenant Code lockout is tracked on the `House`, not the `Tenant`.** A wrong tenant-code guess can't be attributed to a specific tenant record (that's the point of a random-token credential) — only a correct-house/wrong-tenant-code pattern is attributable, and that's a House-level signal. 5 failed attempts locks that house's tenant login for 15 minutes. | Decided during build |
+| 19 | **Prisma 7 requires an explicit driver adapter** (`@prisma/adapter-pg` + `pg`) — connecting via a bare `DATABASE_URL` on the client is no longer supported as of this major version. Noted here only because it affects how `DATABASE_URL` is wired up (`src/lib/prisma.ts`), not a product decision. | Noted |
+
+### What was tested
+
+Full journeys were exercised against a local Postgres instance with a headless browser (estate setup → admin dashboard; staff login for Admin/Landlord/Security with correct and incorrect passwords; tenant login with correct and incorrect House Code/Tenant Code pairs; role-mismatch redirects; unauthenticated redirects to `/login`; logout; and the House-level lockout after 5 failed tenant-login attempts, including confirming the *correct* code is also rejected while locked). All checks passed.
+
+---
+
 *(Future phases append below this line, most recent first.)*

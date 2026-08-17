@@ -1,0 +1,209 @@
+// Estate Dues & Resident Management System — Phase 1 schema
+// Mirrors the data model agreed in docs/phase-0-discovery.md §5.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  LANDLORD
+  TENANT
+  SECURITY
+}
+
+enum DueStatus {
+  NOT_PAID
+  PAYMENT_SUBMITTED
+  VALIDATED
+  REJECTED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CASH
+}
+
+enum PaymentStatus {
+  SUBMITTED
+  VALIDATED
+  REJECTED
+}
+
+// Single row in MVP. Modelled as a table so multi-estate isn't a rewrite later.
+// Created once, via the "set up your estate" flow, together with the first Admin.
+model Estate {
+  id                   String   @id @default(cuid())
+  name                 String
+  address              String?
+  chairmanName         String?
+  chairmanSignatureUrl String?
+  createdAt            DateTime @default(now())
+
+  livingSpaceTypes LivingSpaceType[]
+  houses           House[]
+}
+
+// One row per login identity, regardless of role.
+// Admin/Landlord/Security authenticate with passwordHash.
+// Tenant authenticates via the House Code + Tenant Code pair on the Tenant record instead.
+model User {
+  id                  String    @id @default(cuid())
+  role                Role
+  // Display name. Landlord/Tenant/Security keep their own `fullName` on their
+  // profile table; this exists mainly so Admin (which has no profile table) has one.
+  name                String?
+  phone               String?
+  email               String?   @unique
+  passwordHash        String?
+  status              String    @default("active") // active | inactive
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime  @default(now())
+
+  landlord Landlord?
+  tenant   Tenant?
+  security Security?
+
+  validatedPayments    Payment[]     @relation("ValidatedBy")
+  issuedCertificates   Certificate[] @relation("IssuedBy")
+  deactivationRequests Tenant[]      @relation("DeactivationRequestedBy")
+}
+
+model LivingSpaceType {
+  id       String  @id @default(cuid())
+  estateId String
+  estate   Estate  @relation(fields: [estateId], references: [id])
+  name     String
+  active   Boolean @default(true)
+
+  fees    Fee[]
+  tenants Tenant[]
+
+  @@unique([estateId, name])
+}
+
+// One row per (space type, year) — "configurable, not hard-coded" fees, with history preserved.
+model Fee {
+  id                String          @id @default(cuid())
+  livingSpaceTypeId String
+  livingSpaceType   LivingSpaceType @relation(fields: [livingSpaceTypeId], references: [id])
+  year              Int
+  amount            Int // stored as the smallest currency unit (kobo)
+  createdAt         DateTime        @default(now())
+
+  @@unique([livingSpaceTypeId, year])
+}
+
+model Landlord {
+  id       String @id @default(cuid())
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id])
+  fullName String
+  phone    String
+
+  houses House[]
+}
+
+model House {
+  id          String   @id @default(cuid())
+  estateId    String
+  estate      Estate   @relation(fields: [estateId], references: [id])
+  landlordId  String
+  landlord    Landlord @relation(fields: [landlordId], references: [id])
+  houseNumber String
+  houseCode   String   @unique
+  createdAt   DateTime @default(now())
+
+  // A wrong tenant-code guess can't be attributed to any specific Tenant row
+  // (that's the point of a random-token credential), so failed-attempt
+  // tracking lives here instead: once the House Code matches, further guesses
+  // against *any* tenant code in this house count against this counter.
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  tenants Tenant[]
+
+  @@unique([estateId, houseNumber])
+}
+
+model Tenant {
+  id                String          @id @default(cuid())
+  userId            String?         @unique
+  user              User?           @relation(fields: [userId], references: [id])
+  houseId           String
+  house             House           @relation(fields: [houseId], references: [id])
+  livingSpaceTypeId String
+  livingSpaceType   LivingSpaceType @relation(fields: [livingSpaceTypeId], references: [id])
+  fullName          String
+  phone             String
+  tenantCode        String          @unique
+  status            String          @default("active") // active | inactive
+  moveInDate        DateTime
+  moveOutDate       DateTime?
+
+  // Landlord-initiated deactivation request; only Admin flips `status` to inactive.
+  deactivationRequestedAt   DateTime?
+  deactivationRequestedById String?
+  deactivationRequestedBy   User?     @relation("DeactivationRequestedBy", fields: [deactivationRequestedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  dues TenantDue[]
+}
+
+model Security {
+  id       String @id @default(cuid())
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id])
+  fullName String
+}
+
+// One per tenant per year — the anchor record for "do they owe, and what's the status."
+model TenantDue {
+  id                  String    @id @default(cuid())
+  tenantId            String
+  tenant              Tenant    @relation(fields: [tenantId], references: [id])
+  year                Int
+  livingSpaceTypeId   String // snapshot of the type at generation time
+  amount              Int // snapshot of the fee at generation time (kobo)
+  status              DueStatus @default(NOT_PAID)
+  expectedPaymentDate DateTime?
+  createdAt           DateTime  @default(now())
+
+  payments    Payment[]
+  certificate Certificate?
+
+  @@unique([tenantId, year])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  tenantDueId     String
+  tenantDue       TenantDue     @relation(fields: [tenantDueId], references: [id])
+  method          PaymentMethod
+  referenceNumber String?
+  proofFileUrl    String?
+  status          PaymentStatus @default(SUBMITTED)
+  notes           String?
+  submittedAt     DateTime      @default(now())
+  validatedById   String?
+  validatedBy     User?         @relation("ValidatedBy", fields: [validatedById], references: [id])
+  validatedAt     DateTime?
+}
+
+model Certificate {
+  id                String    @id @default(cuid())
+  tenantDueId       String    @unique
+  tenantDue         TenantDue @relation(fields: [tenantDueId], references: [id])
+  certificateNumber String    @unique
+  qrToken           String    @unique
+  issuedAt          DateTime  @default(now())
+  issuedById        String
+  issuedBy          User      @relation("IssuedBy", fields: [issuedById], references: [id])
+}

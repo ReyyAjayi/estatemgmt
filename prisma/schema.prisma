@@ -162,6 +162,7 @@ model Security {
   userId   String @unique
   user     User   @relation(fields: [userId], references: [id])
   fullName String
+  phone    String
 }
 
 // One per tenant per year — the anchor record for "do they owe, and what's the status."

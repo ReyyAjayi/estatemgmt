@@ -16,7 +16,7 @@ The core objective: let estate management see who has paid and who hasn't, so th
 - Phase 6: Security's own dashboard — search by house number (shows every tenant in that house) or tenant code, returning only CLEAR/NOT CLEAR and names. Scanning a certificate's QR with any phone camera app already opens the same verification page from Phase 5, so no separate in-app scanner was needed.
 - Phase 7: outstanding tenants can tell the estate when they plan to pay; Admin and Landlord see a "Promised by X" / "Overdue — promised X" / "No promise given" flag per tenant, plus a new Overdue stat tile that only counts dues with no valid current promise.
 - Phase 8: a mobile-viewport pass (fixed one real issue — tables now scroll horizontally instead of wrapping into cramped cells), CSV export on the Admin payments dashboard, a per-IP login rate limiter on top of the existing account lockout, friendly global error/404 pages verified against a real forced failure, and a deployment guide (`docs/deployment.md`).
-- Phase 8 follow-up: proof-of-payment and chairman-signature storage now supports a real S3-compatible backend (Cloudflare R2 / Supabase Storage / AWS S3 — same code, just env vars) with local disk as a dev-only fallback; Admin can now set the chairman name and upload a signature from a new **Settings** screen, and both appear on certificates automatically.
+- Phase 8 follow-up: proof-of-payment and chairman-signature storage now supports a real S3-compatible backend (Cloudflare R2 / Supabase Storage / AWS S3 — same code, just env vars) with local disk as a dev-only fallback; Admin can now set the chairman name and upload a signature from a new **Settings** screen, and both appear on certificates automatically. Admin can also now create **Security** accounts in-app (`/admin/security`) — this was a real gap before (only Landlord had a creation screen); it's deliberately list + add only, no password reset.
 
 **Before deploying, one thing is still genuinely on you:** provisioning the actual storage bucket and Postgres database — the code supports both, but creating the accounts and setting the connection details is a Product Owner step. See `docs/deployment.md` for exact steps and env var names.
 
@@ -43,7 +43,9 @@ Visit `http://localhost:3000`. Since no estate exists yet, you'll land on **Set 
 
 From the Admin dashboard you can now add living-space types & fees, landlords (a one-time temporary password is shown for you to share), houses (assigned to a landlord, with an auto-generated House Code), and tenants (with an auto-generated Tenant Code) — or sign in as a Landlord to do the equivalent for their own houses/tenants.
 
-To quickly populate a Security account too (Security has no self-service creation UI, same as Landlord — both are Admin-created in-app), seed a dev fixture **after** completing the setup step above:
+Security accounts work the same way — Admin creates them from **Security** in the nav (`/admin/security`), a one-time temp password is shown to share. That screen is deliberately list + add only, with no password reset.
+
+To quickly populate test accounts without clicking through the UI, seed a dev fixture **after** completing the setup step above:
 
 ```bash
 npm run db:seed

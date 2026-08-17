@@ -111,7 +111,7 @@ async function main() {
   });
   await prisma.security.upsert({
     where: { userId: securityUser.id },
-    create: { userId: securityUser.id, fullName: "Sample Security" },
+    create: { userId: securityUser.id, fullName: "Sample Security", phone: "+2348000000003" },
     update: {},
   });
 

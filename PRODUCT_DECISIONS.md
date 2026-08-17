@@ -211,4 +211,19 @@ The object-storage swap is code-complete but **not exercised against a real buck
 
 ---
 
+## Phase 8 Follow-up 2 — Admin → Security Account Creation (2026-08-17)
+
+A gap surfaced while producing a full onboarding walkthrough (screenshots) for the PO: Landlord accounts have always had an Admin-facing create/list screen, but Security never did — every Security login shown in earlier phases came from the dev seed script, not the app. This was a genuine miss against Phase 1 decision #15 ("Landlord **and Security** accounts are created by Admin in-app").
+
+| # | Decision | Status |
+|---|---|---|
+| 56 | **The new `/admin/security` screen is list + add only — no "Reset password" button.** Explicit PO call: Security's own side of the app should stay a single simple screen (already true — the Clearance lookup page has no sub-navigation), and the Admin-facing management screen for it should be lighter than Landlord's equivalent, not a 1:1 copy. A locked-out guard isn't handled through this screen today; that's an accepted gap for now, not an oversight. | Confirmed by PO |
+| 57 | **`Security.phone` was added to the schema** (it only had `fullName` before) so the account-creation form matches Landlord's shape — Admin needs a way to reach a newly-created guard to share their one-time temp password, same reason Landlord has always captured phone. Existing rows (dev/seed data only) were backfilled with a placeholder before the column was made required — no real Security accounts existed anywhere before this screen did. | Decided during build |
+
+### What was tested
+
+Admin creates a security account and sees the one-time temp password (confirmed no "Reset password" control appears anywhere on the page, by design); the account persists in the list with its phone number after reload; a Landlord and an anonymous request are both blocked from `/admin/security`; the newly created account can actually log in and lands on the single-screen Clearance lookup dashboard, confirming no extra nav items leaked in. 9/9 checks passed.
+
+---
+
 *(Future phases append below this line, most recent first.)*

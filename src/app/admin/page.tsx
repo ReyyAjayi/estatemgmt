@@ -23,6 +23,10 @@ export default async function AdminDashboard() {
     listLandlords(),
     getPaymentDashboardTotals(session, year),
   ]);
+  // "Cleared" means VALIDATED; a submitted-but-unreviewed payment hasn't
+  // cleared yet, so the headline count needs to include it too, not just
+  // NOT_PAID/REJECTED — otherwise it reads as if nobody owes anything.
+  const notCleared = totals.outstanding + totals.submitted;
 
   return (
     <DashboardShell
@@ -32,8 +36,9 @@ export default async function AdminDashboard() {
     >
       <h1 className="text-2xl font-semibold text-slate-900">Admin dashboard</h1>
       <p className="mt-2 max-w-2xl text-slate-600">
-        {totals.outstanding} tenant{totals.outstanding === 1 ? "" : "s"} still owe {year}&apos;s
-        due. See the full breakdown on the{" "}
+        {notCleared} tenant{notCleared === 1 ? "" : "s"} still{" "}
+        {notCleared === 1 ? "hasn't" : "haven't"} completed {year}&apos;s due. See the full
+        breakdown on the{" "}
         <a href="/admin/payments" className="underline">
           Payments
         </a>{" "}

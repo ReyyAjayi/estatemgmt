@@ -9,6 +9,12 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Migrations need a direct (non-pooled) connection — a transaction
+    // pooler (e.g. Supabase's port 6543 / pgbouncer) doesn't support the
+    // advisory locks and session state `migrate deploy` relies on, and a
+    // session pooler's tiny connection cap gets exhausted by app traffic.
+    // DIRECT_URL falls back to DATABASE_URL for local dev, where there's
+    // usually just one plain Postgres connection with no pooler involved.
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });

@@ -16,20 +16,24 @@ Both items previously flagged as blockers now have code support — what's left 
 ## Steps
 
 1. **Push this repository to GitHub** (if not already) and import it into Vercel as a new project.
-2. **Provision a Postgres database** — Neon or Supabase both work; either gives you a `DATABASE_URL` connection string.
+2. **Provision a Postgres database** — Neon or Supabase both work. **If you're on Supabase, you need two connection strings, not one** (Project Settings → Database → Connection string):
+   - `DATABASE_URL` — the **Transaction pooler** URI (port `6543`, with `?pgbouncer=true`). This is what the app uses for every request at runtime. Serverless functions open many short-lived connections, and transaction-mode pooling is built for exactly that.
+   - `DIRECT_URL` — the **direct connection** (port `5432`, host like `db.<project-ref>.supabase.co`, no pooler). Used only when running migrations (step 5).
+   - **Do not put the Session pooler URI (also port `5432`, host `...pooler.supabase.com`) in `DATABASE_URL`.** It caps out at a very small `pool_size` (commonly 15) shared across all connections, and unlike transaction pooling it holds each connection for the life of the client rather than multiplexing. Under any real traffic — or even a `migrate deploy` racing app requests — you'll hit `FATAL: max clients reached in session mode`, which surfaces in the app as random "Something went wrong" errors and can even fail your build.
+   - Neon doesn't have this distinction — Neon's standard pooled connection string works fine as `DATABASE_URL` alone, and `DIRECT_URL` can be left unset.
 3. **Provision object storage** — create a bucket with your chosen provider:
    - **Cloudflare R2** (recommended): create a bucket in the Cloudflare dashboard, create an API token scoped to it, note the account-id-based endpoint (`https://<account-id>.r2.cloudflarestorage.com`).
    - **Supabase Storage**: create a bucket in your Supabase project; use its S3-compatible endpoint (Project Settings → Storage → S3 Connection) and an access key pair.
    - **AWS S3**: create a bucket and an IAM user/role with read/write access to it; omit `S3_ENDPOINT` (defaults to real AWS).
 4. **Set environment variables** in the Vercel project settings:
-   - `DATABASE_URL` — the connection string from step 2.
+   - `DATABASE_URL` (and `DIRECT_URL` if applicable) — from step 2.
    - `SESSION_SECRET` — a long random string (32+ characters) used to sign session cookies. Generate one with `openssl rand -base64 32`. Do not reuse the local `.env` value.
    - `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT` (omit for real AWS S3), `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` — from step 3. See `.env.example` for the exact names.
 5. **Run migrations against the production database** before the first deploy (or as part of your deploy pipeline):
    ```bash
-   DATABASE_URL="<production-url>" npm run db:migrate:deploy
+   DATABASE_URL="<production-url>" DIRECT_URL="<direct-url-if-applicable>" npm run db:migrate:deploy
    ```
-   This runs `prisma migrate deploy` — the non-interactive, production-safe counterpart to `prisma migrate dev` used locally. It applies existing migrations only; it never generates new ones or prompts for confirmation.
+   This runs `prisma migrate deploy` — the non-interactive, production-safe counterpart to `prisma migrate dev` used locally. It applies existing migrations only; it never generates new ones or prompts for confirmation. `prisma.config.ts` points migrations at `DIRECT_URL` when it's set (falling back to `DATABASE_URL` otherwise), so on Supabase this step correctly uses the direct connection even though the app runs on the pooled one.
 6. **Deploy.** Vercel will run `npm install` (which triggers `postinstall: prisma generate`) and `npm run build` automatically.
 7. **Visit the deployed URL.** With no `Estate` row yet, you'll land on `/setup` — this creates the estate and the first Admin account, exactly like local development.
 8. **Smoke test**: log in as that Admin, set the chairman name/signature under Settings, add a living-space type/fee, a landlord, a house, and a tenant; log in as the tenant and submit a payment; validate it as Admin; confirm the certificate PDF downloads with the signature on it and its QR code resolves at `/verify/[token]`.

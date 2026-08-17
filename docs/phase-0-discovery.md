@@ -146,7 +146,7 @@ Enforced in backend query/service functions, not just hidden in the UI (per your
 - **Server actions / API routes** call into a `lib/services` layer (e.g. `tenants.ts`, `payments.ts`, `dues.ts`) that owns all authorization checks and business rules (fee lookup, due-status transitions). UI code never queries the database directly — this is what makes backend-level access control real rather than UI-only.
 - **Prisma** as the single data-access layer against Postgres.
 - **Object storage** for proof-of-payment images and the chairman's signature; the app stores only the object key/URL.
-- **QR/certificate**: on validation, generate a `Certificate` row with an opaque `qr_token`; the QR encodes a verification path containing that token; resolving it requires an authenticated Security/Admin/Landlord session (see §2 ambiguity #6 — pending your confirmation).
+- **QR/certificate**: on validation, generate a `Certificate` row with an opaque `qr_token`; the QR encodes a verification path containing that token; resolving it requires an authenticated Security/Admin/Landlord session (confirmed, §10.3).
 - No background job queue, no message broker, no microservices — unnecessary at this scale. Reminders in later phases can start as a simple daily scheduled function (Vercel Cron) and only need a real queue if volume ever demands it.
 
 ## 9. Development Roadmap

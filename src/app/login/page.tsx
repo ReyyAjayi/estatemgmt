@@ -4,6 +4,11 @@ import { getSession } from "@/lib/session";
 import { roleHome } from "@/lib/auth-guard";
 import { LoginForm } from "./LoginForm";
 
+// Must stay dynamic: see src/app/page.tsx for why (estate/session checks
+// here are conditionally skipped, which would let Next statically cache a
+// stale build-time result otherwise).
+export const dynamic = "force-dynamic";
+
 export default async function LoginPage() {
   const estate = await getEstate();
   if (!estate) {

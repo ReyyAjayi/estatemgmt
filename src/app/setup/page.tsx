@@ -2,6 +2,11 @@ import { redirect } from "next/navigation";
 import { getEstate } from "@/lib/estate";
 import { SetupForm } from "./SetupForm";
 
+// Must stay dynamic: see src/app/page.tsx for why (the estate check here
+// never touches a dynamic API, which would let Next statically cache a
+// stale build-time result otherwise).
+export const dynamic = "force-dynamic";
+
 export default async function SetupPage() {
   const estate = await getEstate();
   if (estate) {

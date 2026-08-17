@@ -127,4 +127,24 @@ Security's own dedicated search/scan lookup screen (search by house number or te
 
 ---
 
+## Phase 6 — Security Role (2026-08-17)
+
+Built Security's own screen: search by house number or tenant code, returning only CLEAR/NOT CLEAR + names. The QR-scan half of "search/scan lookup" from the roadmap turned out to need no new code — see decision #41.
+
+| # | Decision | Status |
+|---|---|---|
+| 40 | **A house-number search returns every active tenant in that house, each with their own CLEAR/NOT CLEAR** — houses can have multiple tenants with independent dues (Phase 0 decision #1), so a single combined status for the house would hide a defaulting housemate. A tenant-code search always returns exactly one tenant, since codes are per-tenant. | Decided during build |
+| 41 | **No in-app camera QR scanner was built.** The certificate QR already encodes a full URL to `/verify/[token]` (Phase 5), so scanning it with any phone's stock camera app opens that page directly — Security logs in there once and every scan afterward just works. Building a custom in-page scanner (camera permissions, a JS decoding library, mobile testing) would duplicate that for no gain, and Phase 0 already framed gate scanning as a fallback, not the primary flow. | Decided during build |
+| 42 | **An unmatched search query and a query matching a house with zero active tenants get distinct messages** ("no house or tenant matches" vs. "no active tenants") — both are informational only, neither discloses anything about who exists that the other doesn't already imply from the query the user themselves typed. | Decided during build |
+
+### What was tested
+
+Full journeys were exercised against a local Postgres instance with a headless browser: a house with two tenants — one validated, one still unpaid — searched by house number correctly shows both names with independent CLEAR/NOT CLEAR badges and no amounts anywhere on the page; searching by that validated tenant's code returns exactly that one tenant, CLEAR; an unmatched query shows a generic no-match message; Admin and Landlord logins are still bounced away from `/security` (unchanged from earlier phases — Security's screen isn't shared); an anonymous request redirects to `/login`. 14/14 checks passed.
+
+### What's still open
+
+Phase 0's original roadmap for Security ends here (§8) — the remaining phases are Phase 7 (expected-payment-date / promise-to-pay) and Phase 8 (mobile polish, CSV export, login rate-limiting, deployment finalization). Proof-of-payment object storage (#25) and chairman name/signature capture (#39) remain open pre-deployment follow-ups.
+
+---
+
 *(Future phases append below this line, most recent first.)*

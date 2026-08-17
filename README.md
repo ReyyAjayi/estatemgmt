@@ -6,17 +6,18 @@ The core objective: let estate management see who has paid and who hasn't, so th
 
 ## Project status
 
-**Phase 0 — Discovery & Architecture** through **Phase 5 — Digital Certificate** are complete.
+**Phase 0 — Discovery & Architecture** through **Phase 6 — Security Role** are complete.
 
 - Phase 1: estate self-registration, staff (Admin/Landlord/Security) password login, tenant House Code + Tenant Code login, role-protected dashboards, login lockout.
 - Phase 2: Admin & Landlord CRUD for houses, tenants, living-space types and fees; House Code/Tenant Code generation and display; Landlord-initiated tenant deactivation requests with Admin confirmation.
 - Phase 3: tenants see their payment status and amount due, and can submit a bank-transfer payment with proof of payment; Admin (and Landlord, read-only) get the payment dashboard from the product spec — totals, filters, and the defaulter table.
 - Phase 4: Admin review queue to validate/reject submitted payments with notes, cash payment recording (marks paid immediately), and payment history views for Admin (filterable), Landlord (read-only) and Tenant (their own attempts, including rejection reasons).
 - Phase 5: a certificate is issued automatically the moment a due is validated; tenants can view/download their own PDF certificate with a QR code, and Admin/Landlord/Security can resolve that QR (or a shared link) through a gated `/verify/[token]` page showing CLEAR status with no financial detail.
+- Phase 6: Security's own dashboard — search by house number (shows every tenant in that house) or tenant code, returning only CLEAR/NOT CLEAR and names. Scanning a certificate's QR with any phone camera app already opens the same verification page from Phase 5, so no separate in-app scanner was needed.
 
 **Before this goes further, one open item needs your input:** proof-of-payment files are currently stored on local disk, which won't work once deployed (see `PRODUCT_DECISIONS.md` #25). Let me know if you already have a Supabase Storage / Cloudflare R2 / S3 account, or want me to set one up when we get to deployment.
 
-No Security search/scan screen yet — that's Phase 6 (search by house/tenant code, minimal CLEAR/NOT CLEAR result). Today Security can only reach a certificate's verification page via a link or scanned QR.
+Next up per the roadmap: Phase 7 (expected-payment-date / promise-to-pay) and Phase 8 (mobile polish, CSV export, login rate-limiting, deployment finalization).
 
 - [`docs/phase-0-discovery.md`](docs/phase-0-discovery.md) — full requirements analysis, architecture, data model, roles/permissions, screens, roadmap, and open decisions.
 - [`PRODUCT_DECISIONS.md`](PRODUCT_DECISIONS.md) — running log of significant product/technical decisions.

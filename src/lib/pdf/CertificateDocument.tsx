@@ -11,6 +11,11 @@ const styles = StyleSheet.create({
   value: { fontSize: 13, marginBottom: 14 },
   qr: { width: 130, height: 130 },
   footer: { marginTop: 40, fontSize: 9, color: "#94a3b8", lineHeight: 1.4 },
+  signatureBlock: { marginTop: 32 },
+  signatureImage: { height: 48, marginBottom: 4 },
+  signatureLine: { width: 180, borderTopWidth: 1, borderTopColor: "#cbd5e1", paddingTop: 4 },
+  signatureName: { fontSize: 11, color: "#0f172a" },
+  signatureCaption: { fontSize: 9, color: "#64748b" },
 });
 
 export function CertificateDocument({
@@ -23,6 +28,8 @@ export function CertificateDocument({
   certificateNumber,
   issuedAtLabel,
   qrDataUrl,
+  chairmanName,
+  chairmanSignatureDataUrl,
 }: {
   estateName: string;
   tenantName: string;
@@ -33,6 +40,8 @@ export function CertificateDocument({
   certificateNumber: string;
   issuedAtLabel: string;
   qrDataUrl: string;
+  chairmanName?: string | null;
+  chairmanSignatureDataUrl?: string | null;
 }) {
   return (
     <Document>
@@ -63,6 +72,18 @@ export function CertificateDocument({
           been paid and validated. Scan the QR code, or present this certificate, for gate
           verification.
         </Text>
+
+        {(chairmanName || chairmanSignatureDataUrl) && (
+          <View style={styles.signatureBlock}>
+            {chairmanSignatureDataUrl && (
+              <Image src={chairmanSignatureDataUrl} style={styles.signatureImage} />
+            )}
+            <View style={styles.signatureLine}>
+              {chairmanName && <Text style={styles.signatureName}>{chairmanName}</Text>}
+              <Text style={styles.signatureCaption}>Estate Chairman</Text>
+            </View>
+          </View>
+        )}
       </Page>
     </Document>
   );

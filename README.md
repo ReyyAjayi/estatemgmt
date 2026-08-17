@@ -16,10 +16,9 @@ The core objective: let estate management see who has paid and who hasn't, so th
 - Phase 6: Security's own dashboard — search by house number (shows every tenant in that house) or tenant code, returning only CLEAR/NOT CLEAR and names. Scanning a certificate's QR with any phone camera app already opens the same verification page from Phase 5, so no separate in-app scanner was needed.
 - Phase 7: outstanding tenants can tell the estate when they plan to pay; Admin and Landlord see a "Promised by X" / "Overdue — promised X" / "No promise given" flag per tenant, plus a new Overdue stat tile that only counts dues with no valid current promise.
 - Phase 8: a mobile-viewport pass (fixed one real issue — tables now scroll horizontally instead of wrapping into cramped cells), CSV export on the Admin payments dashboard, a per-IP login rate limiter on top of the existing account lockout, friendly global error/404 pages verified against a real forced failure, and a deployment guide (`docs/deployment.md`).
+- Phase 8 follow-up: proof-of-payment and chairman-signature storage now supports a real S3-compatible backend (Cloudflare R2 / Supabase Storage / AWS S3 — same code, just env vars) with local disk as a dev-only fallback; Admin can now set the chairman name and upload a signature from a new **Settings** screen, and both appear on certificates automatically.
 
-**Before deploying, two open items need your input** — see `docs/deployment.md` for the full picture:
-1. Proof-of-payment files are currently stored on local disk, which won't work on Vercel's ephemeral filesystem (`PRODUCT_DECISIONS.md` #25). Let me know if you already have a Supabase Storage / Cloudflare R2 / S3 account, or want me to set one up.
-2. Certificates render without a chairman signature — there's no settings screen yet to capture one (`PRODUCT_DECISIONS.md` #39). Let me know if that's needed before residents start receiving certificates.
+**Before deploying, one thing is still genuinely on you:** provisioning the actual storage bucket and Postgres database — the code supports both, but creating the accounts and setting the connection details is a Product Owner step. See `docs/deployment.md` for exact steps and env var names.
 
 - [`docs/phase-0-discovery.md`](docs/phase-0-discovery.md) — full requirements analysis, architecture, data model, roles/permissions, screens, roadmap, and open decisions.
 - [`docs/deployment.md`](docs/deployment.md) — how to deploy, what's blocking it, and what to check before going live.

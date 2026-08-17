@@ -2,9 +2,10 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { getSession } from "@/lib/session";
 import { assertCanDownloadCertificate, getCertificateForTenantDue } from "@/lib/services/certificates";
 import { getEstate } from "@/lib/estate";
-import { formatNaira } from "@/lib/currency";
+import { formatNairaAscii } from "@/lib/currency";
 import { getAppOrigin } from "@/lib/app-url";
 import { qrDataUrl } from "@/lib/qr";
+import { readSignatureFile, signatureContentType } from "@/lib/storage";
 import { CertificateDocument } from "@/lib/pdf/CertificateDocument";
 
 // Gated the same way as /api/proofs/[key]: Admin any, Landlord their own
@@ -36,6 +37,13 @@ export async function GET(
   const origin = await getAppOrigin();
   const qr = await qrDataUrl(`${origin}/verify/${certificate.qrToken}`);
 
+  let chairmanSignatureDataUrl: string | null = null;
+  if (estate?.chairmanSignatureUrl) {
+    const signatureBuffer = await readSignatureFile(estate.chairmanSignatureUrl);
+    const contentType = signatureContentType(estate.chairmanSignatureUrl);
+    chairmanSignatureDataUrl = `data:${contentType};base64,${signatureBuffer.toString("base64")}`;
+  }
+
   const buffer = await renderToBuffer(
     <CertificateDocument
       estateName={estate?.name ?? "Estate"}
@@ -43,10 +51,12 @@ export async function GET(
       houseNumber={certificate.tenantDue.tenant.house.houseNumber}
       livingSpaceTypeName={certificate.tenantDue.tenant.livingSpaceType.name}
       year={certificate.tenantDue.year}
-      amountLabel={formatNaira(certificate.tenantDue.amount)}
+      amountLabel={formatNairaAscii(certificate.tenantDue.amount)}
       certificateNumber={certificate.certificateNumber}
       issuedAtLabel={certificate.issuedAt.toLocaleDateString()}
       qrDataUrl={qr}
+      chairmanName={estate?.chairmanName}
+      chairmanSignatureDataUrl={chairmanSignatureDataUrl}
     />
   );
 

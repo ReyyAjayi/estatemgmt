@@ -190,4 +190,25 @@ This was the last phase on the original Phase 0 roadmap. What remains is exactly
 
 ---
 
+## Phase 8 Follow-up — Resolving the Deployment Blockers (2026-08-17)
+
+Direct PO follow-up on the two items Phase 8 flagged as pre-deploy blockers. Both are now resolved in code; what's left is provisioning real accounts, not more building.
+
+| # | Decision | Status |
+|---|---|---|
+| 52 | **Proof-of-payment and chairman-signature storage now supports a real S3-compatible backend** (`src/lib/storage.ts`), selected automatically when `S3_BUCKET`/`S3_REGION`/`S3_ENDPOINT`/`S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` are set; falls back to local disk when they're unset, so local development needs no cloud account. **Recommendation: Cloudflare R2** — S3-compatible (same code, no lock-in), zero egress fees, generous free tier at single-estate volume. Supabase Storage is a reasonable alternative if Supabase ends up being the Postgres provider too (one bill, one dashboard). The actual choice and account creation is still the PO's to make — this decision just confirms the code is provider-agnostic and ready either way. | Confirmed — recommend R2, PO to provision |
+| 53 | **Chairman name/signature is now Admin-configurable** via a new **Settings** screen (`/admin/settings`), added to the Admin nav. Admin can set the chairman's name and upload a signature image (JPG/PNG) at any time; both are stored using the same storage backend as proof-of-payment files (local disk or S3, whichever is configured) and picked up automatically by every certificate generated from that point on — no per-certificate re-entry. | Decided during build |
+| 54 | **The certificate PDF no longer prints a broken currency glyph.** `formatNaira()`'s ₦ symbol isn't in react-pdf's built-in Helvetica font, so it rendered as a broken character (¦) on the PDF specifically — every other screen in the app renders ₦ fine in a browser. Added `formatNairaAscii()` (`src/lib/currency.ts`), used only in the certificate PDF route, which prints "NGN 22,000" instead. Found by actually reading a generated PDF during this phase's testing, not just a code review — a reminder that "the build passed" and "the output looks right" are different checks. | Decided during build |
+| 55 | **The chairman signature is served through its own authenticated-but-unrestricted route** (`/api/estate/signature`, gated only to "must be logged in"), separate from the tenant-scoped `/api/proofs/[key]` pattern — a chairman's signature isn't private per-tenant data the way a bank transfer proof is; every role already sees it on certificates, so no per-role narrowing was needed. | Decided during build |
+
+### What was tested
+
+Full journeys were exercised against a local Postgres instance (S3 backend not available in this sandbox — verified against the local-disk fallback path, which exercises the same code paths minus the actual S3 client calls) with a headless browser: Admin sets a chairman name and uploads a signature image, both persist across a reload and show correctly on the Settings page; a Landlord is redirected away from `/admin/settings`; a tenant's validated payment produces a certificate PDF that was downloaded and read directly (not just checked for a 200 status) — confirming the chairman name, signature image, and corrected "NGN" amount all render correctly on the actual page. 10/10 checks passed, plus a visual re-check after the currency fix.
+
+### What's still open
+
+The object-storage swap is code-complete but **not exercised against a real bucket** in this environment — there are no cloud credentials here to test with. The local-disk fallback path shares all the same code except the actual S3 network calls, so risk is low, but a real first deploy should include one smoke-test upload against the configured bucket before relying on it. See `docs/deployment.md` for the updated steps.
+
+---
+
 *(Future phases append below this line, most recent first.)*

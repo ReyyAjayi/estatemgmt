@@ -6,12 +6,15 @@ The core objective: let estate management see who has paid and who hasn't, so th
 
 ## Project status
 
-**Phase 0 — Discovery & Architecture**, **Phase 1 — Foundation**, and **Phase 2 — Core Estate Data** are complete.
+**Phase 0 — Discovery & Architecture** through **Phase 3 — Payment Submission & Defaulter Visibility** are complete.
 
 - Phase 1: estate self-registration, staff (Admin/Landlord/Security) password login, tenant House Code + Tenant Code login, role-protected dashboards, login lockout.
 - Phase 2: Admin & Landlord CRUD for houses, tenants, living-space types and fees; House Code/Tenant Code generation and display; Landlord-initiated tenant deactivation requests with Admin confirmation.
+- Phase 3: tenants see their payment status and amount due, and can submit a bank-transfer payment with proof of payment; Admin (and Landlord, read-only) get the payment dashboard from the product spec — totals, filters, and the defaulter table.
 
-No payment submission, validation, or defaulter dashboard yet — that's Phase 3, the phase that delivers the core "who has paid" objective from the product spec.
+**Before this goes further, one open item needs your input:** proof-of-payment files are currently stored on local disk, which won't work once deployed (see `PRODUCT_DECISIONS.md` #25). Let me know if you already have a Supabase Storage / Cloudflare R2 / S3 account, or want me to set one up when we get to deployment.
+
+No payment validation yet — that's Phase 4 (Admin review queue, cash recording, payment history).
 
 - [`docs/phase-0-discovery.md`](docs/phase-0-discovery.md) — full requirements analysis, architecture, data model, roles/permissions, screens, roadmap, and open decisions.
 - [`PRODUCT_DECISIONS.md`](PRODUCT_DECISIONS.md) — running log of significant product/technical decisions.

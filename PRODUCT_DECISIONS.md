@@ -64,4 +64,23 @@ Full CRUD + permission-boundary journeys were exercised against a local Postgres
 
 ---
 
+## Phase 3 — Payment Submission & Defaulter Visibility (2026-08-17)
+
+Built the payment core: `TenantDue` generation, tenant bank-transfer submission with proof upload, and the Admin payment dashboard from spec §9. This is the phase that delivers the product's stated core objective — estate management can now see who has paid without stopping anyone at the gate.
+
+| # | Decision | Status |
+|---|---|---|
+| 24 | **`TenantDue` records are generated lazily, not by a cron job.** `ensureDuesForYear()` runs at the top of every payments-related page load (idempotent — skips tenants who already have one) rather than needing background infrastructure. Matches the Phase 0 "no unnecessary complexity" call on reminders/schedules. A tenant whose living-space type has no fee configured for that year is silently skipped (can't bill without a configured fee) — the Admin dashboard surfaces this as a small "N tenants have no fee configured" note rather than failing. | Decided during build |
+| 25 | **Proof-of-payment files are stored on local disk for now** (`src/lib/storage.ts`, under a gitignored `.data/` directory), not the S3-compatible object storage recommended in Phase 0 §4. **This will not work once deployed** — Vercel's filesystem is ephemeral and mostly read-only outside `/tmp`. The module is written as a small, isolated interface (`saveProofFile`/`readProofFile`) specifically so swapping in Supabase Storage or Cloudflare R2 later is a contained change, not a rewrite. **Needs your decision before deployment**: do you have a Supabase/R2/S3 account already, or should I set one up when we get to deployment? | **Needs PO decision before deploying** |
+| 26 | **Proof files are served through an authenticated route** (`/api/proofs/[key]`), not a public URL — only Admin or the submitting tenant can fetch one, checked on every request. This is the same protection a signed object-storage URL would give, so it carries over unchanged when the storage backend is swapped. | Decided during build |
+| 27 | **Resubmission is blocked while a payment is already `PAYMENT_SUBMITTED` or `VALIDATED`.** A tenant can submit again once a submission is `REJECTED` (Phase 4 will add rejection) or if the due is still `NOT_PAID`. Prevents duplicate/confusing attempts piling up before Admin reviews the first one. | Decided during build |
+| 28 | **Dashboard "Outstanding" combines `NOT_PAID` and `REJECTED`** — both need follow-up from the estate's perspective — while the status filter still exposes all four statuses individually for precise filtering. | Decided during build |
+| 29 | **Landlord gets a read-only Payments view** (`/landlord/payments`, same totals + table, no filters) — this was already in the Phase 0 screens list (§7) but hadn't been built yet; added now since it reuses the same scoped service function as Admin's view. | Confirmed (Phase 0 §7), implemented |
+
+### What was tested
+
+Full payment-submission and dashboard journeys were exercised against a local Postgres instance with a headless browser: a fresh tenant seeing the correct OUTSTANDING status and exact fee amount; submitting a bank-transfer payment with a reference number and an uploaded proof file; the status flipping to "SUBMITTED — AWAITING REVIEW" and the submission form disappearing (no duplicate submissions); the Admin payments dashboard showing correct totals and, filtered to the new house, the tenant's row with the right status and a working proof link; and — the important one — the proof-file authorization boundary: Admin gets the file (200), the submitting tenant gets their own file (200), a different, unrelated logged-in user gets refused (403), and an anonymous request gets refused (401). 17/17 checks passed.
+
+---
+
 *(Future phases append below this line, most recent first.)*

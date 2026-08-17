@@ -11,6 +11,7 @@ const ROLE_LABELS: Record<string, string> = {
 const NAV_ITEMS: Record<string, { href: string; label: string }[]> = {
   ADMIN: [
     { href: "/admin", label: "Dashboard" },
+    { href: "/admin/payments", label: "Payments" },
     { href: "/admin/houses", label: "Houses" },
     { href: "/admin/landlords", label: "Landlords" },
     { href: "/admin/tenants", label: "Tenants" },
@@ -18,6 +19,7 @@ const NAV_ITEMS: Record<string, { href: string; label: string }[]> = {
   ],
   LANDLORD: [
     { href: "/landlord", label: "Dashboard" },
+    { href: "/landlord/payments", label: "Payments" },
     { href: "/landlord/houses", label: "My houses" },
     { href: "/landlord/tenants", label: "My tenants" },
   ],

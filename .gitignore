@@ -43,3 +43,6 @@ next-env.d.ts
 
 # prisma
 /src/generated/prisma
+
+# local file storage (dev-only stand-in for real object storage — see src/lib/storage.ts)
+/.data

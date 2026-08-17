@@ -3,13 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { generateHouseCode } from "@/lib/codes";
 import { Role } from "@/generated/prisma/enums";
 import type { SessionPayload } from "@/lib/session";
-
-async function ownLandlordId(session: SessionPayload): Promise<string> {
-  const landlord = await prisma.landlord.findUniqueOrThrow({
-    where: { userId: session.userId },
-  });
-  return landlord.id;
-}
+import { ownLandlordId } from "./viewer-scope";
 
 // ADMIN sees every house in the estate; LANDLORD sees only their own — see
 // docs/phase-0-discovery.md §6. Enforced here, not just by which page links here.

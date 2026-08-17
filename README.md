@@ -6,7 +6,7 @@ The core objective: let estate management see who has paid and who hasn't, so th
 
 ## Project status
 
-**Phase 0 — Discovery & Architecture** is complete and awaiting approval. No application code has been written yet; development proceeds in small, reviewed phases.
+**Phase 0 — Discovery & Architecture** is complete and approved. Phase 1 (foundation/auth skeleton) is next. No application code has been written yet; development proceeds in small, reviewed phases.
 
 - [`docs/phase-0-discovery.md`](docs/phase-0-discovery.md) — full requirements analysis, architecture, data model, roles/permissions, screens, roadmap, and open decisions.
 - [`PRODUCT_DECISIONS.md`](PRODUCT_DECISIONS.md) — running log of significant product/technical decisions.

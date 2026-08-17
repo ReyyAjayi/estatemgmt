@@ -1,6 +1,6 @@
 # Phase 0 — Discovery & Architecture
 
-Status: **Proposed, awaiting Product Owner approval**
+Status: **Approved** (Phase 0 decisions confirmed by Product Owner 2026-08-17; Phase 1 to follow)
 Date: 2026-08-17
 
 This document is the output of Phase 0 only. No application code has been written. Its purpose is to analyse the product specification, surface gaps and risks, and propose an architecture, data model and phased roadmap for approval before any implementation begins.
@@ -62,13 +62,13 @@ These need a decision before or during Phase 1. Recommendations are given; see a
 
 ### Entities
 
-- **Estate** — id, name, chairman_name, chairman_signature_url, address. (Single row in MVP; modelled as a table so multi-estate isn't a rewrite later.)
+- **Estate** — id, name, chairman_name, chairman_signature_url, address. (Single row in MVP; modelled as a table so multi-estate isn't a rewrite later.) Created via a one-time "set up your estate" flow that also creates the first Admin account — the setup screen only allows this while zero `Estate` rows exist, which is the entire access control needed for that flow.
 - **LivingSpaceType** — id, estate_id, name (e.g. "1 Bedroom"), active.
 - **Fee** — id, living_space_type_id, year, amount. One row per (space type, year); this is what "configurable, not hard-coded" means concretely, and it naturally preserves history (2025's fee doesn't change when 2026's is set).
 - **User** — id, role (ADMIN / LANDLORD / TENANT / SECURITY), phone, email (nullable), password_hash (nullable — Tenant doesn't use one), status (active/inactive), created_at. One row per login identity, regardless of role.
 - **Landlord** — id, user_id (FK), full_name, phone.
 - **House** — id, estate_id, landlord_id, house_number, house_code (unique, random), created_at.
-- **Tenant** — id, user_id (FK, nullable until first login setup), house_id, living_space_type_id, full_name, phone, tenant_code (unique, random), status (active/inactive), move_in_date, move_out_date (nullable), created_at.
+- **Tenant** — id, user_id (FK, nullable until first login setup), house_id, living_space_type_id, full_name, phone, tenant_code (unique, random), status (active/inactive), move_in_date, move_out_date (nullable), deactivation_requested_at (nullable, set by Landlord), deactivation_requested_by (FK → User, nullable), created_at. Landlord sets the two `deactivation_requested_*` fields to raise a request; only Admin flipping `status` to inactive actually deactivates — this keeps the "who can write what" rule enforceable in the backend rather than relying on the Landlord UI simply not showing a deactivate button.
 - **Security** — id, user_id (FK), full_name.
 - **TenantDue** — id, tenant_id, year, living_space_type_id (snapshot), amount (snapshot from Fee at generation time), status (NOT_PAID / PAYMENT_SUBMITTED / VALIDATED / REJECTED), expected_payment_date (nullable), created_at. One per tenant per year — the anchor record for "do they owe, and what's the status."
 - **Payment** — id, tenant_due_id (FK), method (BANK_TRANSFER / CASH), reference_number (nullable), proof_file_url (nullable, required for bank transfer), submitted_at, validated_by (FK → User, nullable), validated_at (nullable), status (SUBMITTED / VALIDATED / REJECTED), notes. Multiple payment attempts can exist per due (e.g. rejected → resubmitted); the due's status reflects the latest relevant attempt.
@@ -110,7 +110,7 @@ Enforced in backend query/service functions, not just hidden in the UI (per your
 | View proof-of-payment images | ✅ | ❌ | own only | ❌ |
 | Generate/view certificate | ✅ | view own tenants' | own only | verify only, no download |
 | Lookup clearance status (search/QR) | ✅ | ✅ (own tenants) | ❌ | ✅ (status only, gated login) |
-| Deactivate tenant | ✅ | request only *(flag: see §10)* | ❌ | ❌ |
+| Deactivate tenant | ✅ (final action) | can request deactivation | ❌ | ❌ |
 
 ## 7. Main Screens & User Journeys
 
@@ -118,7 +118,7 @@ Enforced in backend query/service functions, not just hidden in the UI (per your
 - **Dashboard** — totals (active tenants, paid, submitted, outstanding, expected vs actual collection), filterable table by house/landlord/space type/status/year, drill into any tenant.
 - **Houses** — list/create/edit, assign landlord.
 - **Landlords** — list/create/edit, reset password.
-- **Tenants** — list/create/edit, deactivate, view a tenant's full history.
+- **Tenants** — list/create/edit, deactivate (including confirming Landlord-requested deactivations from a small queue/flag on the tenant list), view a tenant's full history.
 - **Fee configuration** — set amount per living-space type per year.
 - **Payment review queue** — list of SUBMITTED payments, open one to see proof + reference, Validate or Reject with a note.
 - **Record cash payment** — pick tenant → confirm amount (auto-calculated) → mark VALIDATED immediately.
@@ -126,7 +126,7 @@ Enforced in backend query/service functions, not just hidden in the UI (per your
 
 ### Landlord
 - **My houses** — list, create new (system issues House Code), edit.
-- **My tenants** — list across all my houses, create new tenant (system issues Tenant Code), assign house + living-space type, deactivate.
+- **My tenants** — list across all my houses, create new tenant (system issues Tenant Code), assign house + living-space type, request deactivation (Admin confirms).
 - **Tenant payment status** — read-only view of who's paid/outstanding among my tenants.
 
 ### Tenant
@@ -165,16 +165,16 @@ Each phase ends with something runnable and testable, per your iterative rule.
 
 Phases 1–2 and 6–7 are small enough that we may combine adjacent ones once we're moving, but I'll propose that at the time rather than deciding now.
 
-## 10. Decisions Needing Your Input
+## 10. Decisions — Confirmed by Product Owner (2026-08-17)
 
-1. **Tenant login = House Code + Tenant Code together** (not Tenant Code alone), to raise the guessing difficulty without adding SMS/OTP. Agree?
-2. **Admin and Landlord use phone/email + password**, not a bare code, because they hold write access. Tenant and Security use the lighter models described above. Agree, or do you want Landlord to also use a code-based login for consistency with tenants?
-3. **QR/certificate verification requires a Security/Admin/Landlord login** rather than being fully public, to avoid leaking tenant name + house number to anyone who photographs a certificate. Agree, or do you want public (no-login) verification for convenience at the gate?
-4. **Billing is per active tenant**, not per house (see §2.1) — confirming this matches your intent, especially for houses with multiple tenants of different space types.
-5. **No proration for mid-year move-ins** and **no partial payments** in MVP (§2.2–2.3) — agree these can wait?
-6. Can a **Landlord deactivate their own tenant directly**, or must every deactivation go through Admin? (Table in §6 currently shows "request only" — needs your call.)
-7. Who provisions the **first Admin account**? Recommendation: a one-time seed script run by you/me during Phase 1 setup, not an open self-registration flow.
+1. **Tenant login = House Code + Tenant Code together.** Confirmed.
+2. **Admin and Landlord authenticate with phone/email + password**; Tenant and Security use the lighter models described above. Confirmed.
+3. **QR/certificate verification requires a Security/Admin/Landlord login.** Confirmed. Rationale from PO: the priority is minimal delay at the gate, and gate scanning is only a fallback — defaulters are already known from the dashboard. Since Security is already logged into the app for the normal lookup flow during their shift, resolving a scanned QR through that same session adds no extra step or delay; it only prevents a stray photograph of a certificate from being resolved by someone with no session at all.
+4. **Billing is per active tenant, not per house.** Confirmed.
+5. **No proration for mid-year move-ins, and no partial payments — ever, regardless of when the tenant moved in.** Confirmed, stated more strongly than the original proposal: partial payment is out of scope permanently for MVP, not just deferred, and the full annual fee always applies regardless of move-in date.
+6. **Landlords can request deactivation of their own tenant; Admin confirms it.** This is a new small workflow, not just a permissions toggle — see the addition to §6 and §9 below.
+7. **First Admin provisioning: estate self-registration**, not a seed script. The first Admin completes a one-time "Set up your estate" flow that creates the `Estate` record and their own Admin account together (available only while no `Estate` row exists yet). That Admin then creates Landlord and Security accounts in-app — setting each an initial password — and shares credentials with them out of band (phone call/WhatsApp), with no in-person handoff or self-registration flow needed for those roles. There is no automated email/SMS password reset in MVP: if a Landlord or Security user is locked out, Admin resets their password directly in the app.
 
 ---
 
-Once you approve this document (as-is or with adjustments to §10), Phase 1 begins.
+All Phase 0 decisions are confirmed. Phase 1 begins next.

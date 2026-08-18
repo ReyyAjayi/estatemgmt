@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Role } from "@/generated/prisma/enums";
 import { searchClearanceStatus } from "@/lib/services/lookup";
 import { DashboardShell } from "@/components/DashboardShell";
+import { QrScanButton } from "./QrScanButton";
 
 function param(sp: { [key: string]: string | string[] | undefined }, key: string) {
   const value = sp[key];
@@ -30,9 +31,12 @@ export default async function SecurityDashboard({
     <DashboardShell estateName={estate?.name ?? ""} role="SECURITY" personName={security.fullName}>
       <h1 className="text-2xl font-semibold text-slate-900">Clearance lookup</h1>
       <p className="mt-1 max-w-md text-slate-600">
-        Search a house number or tenant code to check {year} clearance. Scanning a tenant&apos;s
-        certificate QR with your phone&apos;s camera works too — it opens the same check directly.
+        Search a house number or tenant code to check {year} clearance, or scan a tenant&apos;s
+        certificate QR code below. Your phone&apos;s own camera app works too — it opens the same
+        check directly.
       </p>
+
+      <QrScanButton />
 
       <form method="get" className="mt-6 flex max-w-md gap-2">
         <input

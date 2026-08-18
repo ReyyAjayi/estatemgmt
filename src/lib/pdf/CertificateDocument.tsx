@@ -16,6 +16,23 @@ const styles = StyleSheet.create({
   signatureLine: { width: 180, borderTopWidth: 1, borderTopColor: "#cbd5e1", paddingTop: 4 },
   signatureName: { fontSize: 11, color: "#0f172a" },
   signatureCaption: { fontSize: 9, color: "#64748b" },
+  stamp: {
+    position: "absolute",
+    top: 56,
+    right: 56,
+    borderWidth: 3,
+    borderColor: "#059669",
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    transform: "rotate(-12deg)",
+  },
+  stampText: {
+    fontSize: 26,
+    fontWeight: 700,
+    color: "#059669",
+    letterSpacing: 2,
+  },
 });
 
 export function CertificateDocument({
@@ -46,6 +63,13 @@ export function CertificateDocument({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        {/* Every certificate is issued only for a VALIDATED due (see
+            issueCertificate in certificates.ts), so its mere existence
+            already means this tenant is cleared -- the stamp is always on. */}
+        <View style={styles.stamp}>
+          <Text style={styles.stampText}>CLEARED</Text>
+        </View>
+
         <Text style={styles.title}>{estateName}</Text>
         <Text style={styles.subtitle}>Certificate of Estate Dues Clearance — {year}</Text>
 

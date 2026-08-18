@@ -38,6 +38,21 @@ Both items previously flagged as blockers now have code support — what's left 
 7. **Visit the deployed URL.** With no `Estate` row yet, you'll land on `/setup` — this creates the estate and the first Admin account, exactly like local development.
 8. **Smoke test**: log in as that Admin, set the chairman name/signature under Settings, add a living-space type/fee, a landlord, a house, and a tenant; log in as the tenant and submit a payment; validate it as Admin; confirm the certificate PDF downloads with the signature on it and its QR code resolves at `/verify/[token]`.
 
+## Backups
+
+Neither Vercel nor a free-tier Postgres provider backs up your data automatically — Supabase's free tier specifically has **no automated backups and no point-in-time recovery**, and separately **auto-pauses the whole project after 7 days with no database activity** (the next request just fails until someone manually resumes it from the Supabase dashboard). Both are worth closing at zero added cost rather than waiting until you can afford Supabase Pro:
+
+`.github/workflows/backup.yml` runs `scripts/backup-db.ts` daily (`workflow_dispatch` also lets you trigger it on demand) — it `pg_dump`s the database, gzips it, and uploads it to the same S3-compatible bucket used for proofs/signatures, under a `backups/` prefix. Because it's a real daily connection to the database, it also resets Supabase's 7-day inactivity clock, so it solves the auto-pause problem as a side effect.
+
+To enable it, add these as **GitHub Actions repository secrets** (Settings → Secrets and variables → Actions — separate from Vercel's environment variables, GitHub Actions can't read those):
+
+- `DIRECT_URL` (or `DATABASE_URL` if you don't have a separate one) — same value as in Vercel.
+- `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` — same values as in Vercel.
+
+To restore from a backup: download the `.sql.gz` object from your bucket's `backups/` prefix, then `gunzip -c <file> | psql "<DIRECT_URL>"` against a fresh/target database.
+
+To run a backup manually from your machine: `npm run db:backup` (reads the same env vars from `.env`).
+
 ## What doesn't need attention
 
 Everything else — the auth/session system, the service-layer authorization model, the data model, Tailwind build — is framework-standard and needs no deployment-specific changes. `next.config.ts` has no custom build overrides that would conflict with Vercel's defaults.

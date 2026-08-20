@@ -8,11 +8,23 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { AddTenantForm } from "./AddTenantForm";
 import { TenantRowActions } from "./TenantRowActions";
 
-export default async function AdminTenantsPage() {
+function param(sp: { [key: string]: string | string[] | undefined }, key: string) {
+  const value = sp[key];
+  return typeof value === "string" && value ? value : undefined;
+}
+
+export default async function AdminTenantsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const session = await requireRole([Role.ADMIN]);
   const estate = await getEstate();
+  const sp = await searchParams;
+  const status = param(sp, "status") === "inactive" ? "inactive" : "active";
+
   const [tenants, houses, spaceTypes] = await Promise.all([
-    listTenantsForViewer(session),
+    listTenantsForViewer(session, { status }),
     listHousesForViewer(session),
     estate ? listLivingSpaceTypes(estate.id) : Promise.resolve([]),
   ]);
@@ -20,9 +32,34 @@ export default async function AdminTenantsPage() {
   return (
     <DashboardShell estateName={estate?.name ?? ""} role="ADMIN">
       <h1 className="text-2xl font-semibold text-slate-900">Tenants</h1>
-      <p className="mt-1 max-w-2xl text-slate-600">All tenants across the estate.</p>
+      <p className="mt-1 max-w-2xl text-slate-600">
+        {status === "active" ? "Active" : "Inactive"} tenants across the estate.
+      </p>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <form method="get" className="mt-6 flex items-end gap-3">
+        <div>
+          <label htmlFor="status" className="block text-sm font-medium text-slate-700">
+            Status
+          </label>
+          <select
+            id="status"
+            name="status"
+            defaultValue={status}
+            className="mt-1 block rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <button
+          type="submit"
+          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+        >
+          Filter
+        </button>
+      </form>
+
+      <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="min-w-full divide-y divide-slate-200 text-sm whitespace-nowrap">
           <thead className="bg-slate-50">
             <tr>
@@ -54,7 +91,9 @@ export default async function AdminTenantsPage() {
             {tenants.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
-                  No tenants yet. Add one below.
+                  {status === "active"
+                    ? "No active tenants. Add one below."
+                    : "No inactive tenants."}
                 </td>
               </tr>
             )}

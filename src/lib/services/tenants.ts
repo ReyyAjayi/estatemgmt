@@ -6,10 +6,16 @@ import type { SessionPayload } from "@/lib/session";
 import { ownLandlordId } from "./viewer-scope";
 
 // ADMIN sees every tenant in the estate; LANDLORD sees only tenants in their
-// own houses — see docs/phase-0-discovery.md §6.
-export async function listTenantsForViewer(session: SessionPayload) {
-  const where =
-    session.role === Role.ADMIN ? {} : { house: { landlordId: await ownLandlordId(session) } };
+// own houses — see docs/phase-0-discovery.md §6. `status` narrows to just
+// "active" or "inactive" tenants; omitted, every tenant is returned.
+export async function listTenantsForViewer(
+  session: SessionPayload,
+  filters: { status?: "active" | "inactive" } = {}
+) {
+  const where = {
+    ...(session.role === Role.ADMIN ? {} : { house: { landlordId: await ownLandlordId(session) } }),
+    ...(filters.status ? { status: filters.status } : {}),
+  };
 
   return prisma.tenant.findMany({
     where,

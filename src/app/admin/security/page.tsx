@@ -4,6 +4,7 @@ import { getEstate } from "@/lib/estate";
 import { listSecurityAccounts } from "@/lib/services/security";
 import { DashboardShell } from "@/components/DashboardShell";
 import { AddSecurityForm } from "./AddSecurityForm";
+import { ToggleStatusButton } from "./ToggleStatusButton";
 
 export default async function SecurityAccountsPage() {
   await requireRole([Role.ADMIN]);
@@ -25,6 +26,8 @@ export default async function SecurityAccountsPage() {
               <th className="px-4 py-3 text-left font-medium text-slate-600">Name</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Phone</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Email</th>
+              <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
+              <th className="px-4 py-3 text-left font-medium text-slate-600">Account</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -33,11 +36,25 @@ export default async function SecurityAccountsPage() {
                 <td className="px-4 py-3 font-medium text-slate-900">{security.fullName}</td>
                 <td className="px-4 py-3 text-slate-600">{security.phone}</td>
                 <td className="px-4 py-3 text-slate-600">{security.user.email}</td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      security.user.status === "active"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {security.user.status === "active" ? "Active" : "Inactive"}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <ToggleStatusButton securityId={security.id} status={security.user.status} />
+                </td>
               </tr>
             ))}
             {securityAccounts.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
                   No security accounts yet. Add one below.
                 </td>
               </tr>

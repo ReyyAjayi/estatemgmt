@@ -40,3 +40,13 @@ export async function createSecurityAccount(input: {
 
   return { security, tempPassword };
 }
+
+// Security personnel turn over -- a guard who's left the estate needs their
+// access gone, not just untouched until someone remembers. Deactivating
+// blocks new logins immediately (staffLogin checks User.status) and, since
+// requireRole re-checks status on every request, also ends any session
+// they're already signed into on their very next page load.
+export async function setSecurityAccountStatus(securityId: string, status: "active" | "inactive") {
+  const security = await prisma.security.findUniqueOrThrow({ where: { id: securityId } });
+  await prisma.user.update({ where: { id: security.userId }, data: { status } });
+}

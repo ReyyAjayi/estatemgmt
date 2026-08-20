@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getEstate } from "@/lib/estate";
 import { getSession } from "@/lib/session";
-import { roleHome } from "@/lib/auth-guard";
+import { roleHome, isSessionSubjectActive } from "@/lib/auth-guard";
 import { LoginForm } from "./LoginForm";
 
 // Must stay dynamic: see src/app/page.tsx for why (estate/session checks
@@ -15,8 +15,12 @@ export default async function LoginPage() {
     redirect("/setup");
   }
 
+  // A deactivated account's cookie still verifies cryptographically (see
+  // auth-guard.ts) -- without re-checking DB status here too, this page
+  // would bounce them straight to roleHome, which requireRole would just
+  // redirect back to /login from, looping forever.
   const session = await getSession();
-  if (session) {
+  if (session && (await isSessionSubjectActive(session))) {
     redirect(roleHome(session.role));
   }
 

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth-guard";
 import { Role } from "@/generated/prisma/enums";
-import { createSecurityAccount } from "@/lib/services/security";
+import { createSecurityAccount, setSecurityAccountStatus } from "@/lib/services/security";
 
 export type CreateSecurityState = {
   error: string | null;
@@ -41,5 +41,31 @@ export async function createSecurityAction(
     };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Could not create security account." };
+  }
+}
+
+export type ToggleStatusState = { error: string | null };
+
+export async function toggleSecurityStatusAction(
+  _prevState: ToggleStatusState,
+  formData: FormData
+): Promise<ToggleStatusState> {
+  await requireRole([Role.ADMIN]);
+
+  const securityId = formData.get("securityId");
+  const nextStatus = formData.get("nextStatus");
+  if (typeof securityId !== "string" || !securityId) {
+    return { error: "Missing security account." };
+  }
+  if (nextStatus !== "active" && nextStatus !== "inactive") {
+    return { error: "Invalid status." };
+  }
+
+  try {
+    await setSecurityAccountStatus(securityId, nextStatus);
+    revalidatePath("/admin/security");
+    return { error: null };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not update status." };
   }
 }

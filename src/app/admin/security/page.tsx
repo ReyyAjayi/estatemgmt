@@ -5,6 +5,7 @@ import { listSecurityAccounts } from "@/lib/services/security";
 import { DashboardShell } from "@/components/DashboardShell";
 import { AddSecurityForm } from "./AddSecurityForm";
 import { ToggleStatusButton } from "./ToggleStatusButton";
+import { ResetPasswordButton } from "./ResetPasswordButton";
 
 export default async function SecurityAccountsPage() {
   await requireRole([Role.ADMIN]);
@@ -48,7 +49,10 @@ export default async function SecurityAccountsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <ToggleStatusButton securityId={security.id} status={security.user.status} />
+                  <div className="flex flex-wrap gap-2">
+                    <ResetPasswordButton securityId={security.id} />
+                    <ToggleStatusButton securityId={security.id} status={security.user.status} />
+                  </div>
                 </td>
               </tr>
             ))}

@@ -6,9 +6,8 @@ import { Role } from "@/generated/prisma/enums";
 
 // Mirrors landlords.ts createLandlord — same "Admin-created in-app,
 // temp password shown once" pattern (docs/phase-0-discovery.md §10.7 /
-// PRODUCT_DECISIONS.md #15). Deliberately no resetSecurityPassword: per the
-// PO, this screen is list + add only, not a full management surface — a
-// locked-out guard is handled another way for now, not through this screen.
+// PRODUCT_DECISIONS.md #15). This screen was originally list + add only
+// with no reset — see resetSecurityPassword below for why that changed.
 export function listSecurityAccounts() {
   return prisma.security.findMany({
     orderBy: { fullName: "asc" },
@@ -49,4 +48,18 @@ export async function createSecurityAccount(input: {
 export async function setSecurityAccountStatus(securityId: string, status: "active" | "inactive") {
   const security = await prisma.security.findUniqueOrThrow({ where: { id: securityId } });
   await prisma.user.update({ where: { id: security.userId }, data: { status } });
+}
+
+// Mirrors resetLandlordPassword — the PO reversed the earlier "no reset"
+// decision above once deactivation existed, since a locked-out (not
+// deactivated) guard needs the same recovery path other staff already have.
+export async function resetSecurityPassword(securityId: string) {
+  const security = await prisma.security.findUniqueOrThrow({ where: { id: securityId } });
+  const tempPassword = generateTempPassword();
+  const passwordHash = await hashPassword(tempPassword);
+  await prisma.user.update({
+    where: { id: security.userId },
+    data: { passwordHash, failedLoginAttempts: 0, lockedUntil: null },
+  });
+  return { tempPassword };
 }

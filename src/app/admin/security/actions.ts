@@ -4,7 +4,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth-guard";
 import { Role } from "@/generated/prisma/enums";
-import { createSecurityAccount, setSecurityAccountStatus } from "@/lib/services/security";
+import {
+  createSecurityAccount,
+  setSecurityAccountStatus,
+  resetSecurityPassword,
+} from "@/lib/services/security";
 
 export type CreateSecurityState = {
   error: string | null;
@@ -67,5 +71,27 @@ export async function toggleSecurityStatusAction(
     return { error: null };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Could not update status." };
+  }
+}
+
+export type ResetPasswordState = { error: string | null; tempPassword?: string };
+
+export async function resetPasswordAction(
+  _prevState: ResetPasswordState,
+  formData: FormData
+): Promise<ResetPasswordState> {
+  await requireRole([Role.ADMIN]);
+
+  const securityId = formData.get("securityId");
+  if (typeof securityId !== "string" || !securityId) {
+    return { error: "Missing security account." };
+  }
+
+  try {
+    const { tempPassword } = await resetSecurityPassword(securityId);
+    revalidatePath("/admin/security");
+    return { error: null, tempPassword };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not reset password." };
   }
 }

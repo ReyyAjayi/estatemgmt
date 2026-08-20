@@ -25,6 +25,7 @@ const NAV_ITEMS: Record<string, { href: string; label: string }[]> = {
     { href: "/landlord/payments", label: "Payments" },
     { href: "/landlord/houses", label: "My houses" },
     { href: "/landlord/tenants", label: "My tenants" },
+    { href: "/landlord/my-unit", label: "My unit" },
   ],
   TENANT: [{ href: "/tenant", label: "Dashboard" }],
   SECURITY: [{ href: "/security", label: "Dashboard" }],

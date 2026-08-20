@@ -6,6 +6,7 @@ import {
   ensureDuesForYear,
   getPaymentDashboardTotals,
   listDuesForViewer,
+  listLandlordUnitDues,
 } from "@/lib/services/dues";
 import { listHousesForViewer } from "@/lib/services/houses";
 import { listLandlords } from "@/lib/services/landlords";
@@ -43,13 +44,22 @@ export default async function AdminPaymentsPage({
     await ensureDuesForYear(estate.id, year);
   }
 
-  const [totals, dues, houses, landlords, spaceTypes] = await Promise.all([
+  const [totals, dues, houses, landlords, spaceTypes, landlordUnitDues] = await Promise.all([
     getPaymentDashboardTotals(session, year),
     listDuesForViewer(session, year, { houseId, landlordId, livingSpaceTypeId, status }),
     listHousesForViewer(session),
     listLandlords(),
     estate ? listLivingSpaceTypes(estate.id) : Promise.resolve([]),
+    estate ? listLandlordUnitDues(estate.id, year) : Promise.resolve([]),
   ]);
+
+  const landlordUnitTotals = {
+    total: landlordUnitDues.length,
+    paid: landlordUnitDues.filter((d) => d.status === "VALIDATED").length,
+    outstanding: landlordUnitDues.filter((d) => d.status === "NOT_PAID" || d.status === "REJECTED")
+      .length,
+    submitted: landlordUnitDues.filter((d) => d.status === "PAYMENT_SUBMITTED").length,
+  };
 
   const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
   const hasFilters = houseId || landlordId || livingSpaceTypeId || status;
@@ -287,6 +297,70 @@ export default async function AdminPaymentsPage({
           </tbody>
         </table>
       </div>
+
+      {landlordUnitTotals.total > 0 && (
+        <div className="mt-10">
+          <h2 className="text-lg font-semibold text-slate-900">Landlord-occupied units — {year}</h2>
+          <p className="mt-1 max-w-2xl text-slate-600">
+            Landlords who live in one of their own houses, kept separate from tenant compliance
+            above so the two are never mixed together.
+          </p>
+
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <StatTile label="Landlord units" value={landlordUnitTotals.total} />
+            <StatTile label="Paid" value={landlordUnitTotals.paid} />
+            <StatTile label="Payment submitted" value={landlordUnitTotals.submitted} />
+            <StatTile label="Outstanding" value={landlordUnitTotals.outstanding} />
+          </div>
+
+          <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <table className="min-w-full divide-y divide-slate-200 text-sm whitespace-nowrap">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium text-slate-600">House</th>
+                  <th className="px-4 py-3 text-left font-medium text-slate-600">Landlord</th>
+                  <th className="px-4 py-3 text-left font-medium text-slate-600">Amount</th>
+                  <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
+                  <th className="px-4 py-3 text-left font-medium text-slate-600">Certificate</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {landlordUnitDues.map((due) => {
+                  const display = DUE_STATUS_DISPLAY[due.status];
+                  return (
+                    <tr key={due.id}>
+                      <td className="px-4 py-3 font-medium text-slate-900">
+                        {due.tenant.house.houseNumber}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{due.tenant.house.landlord.fullName}</td>
+                      <td className="px-4 py-3 text-slate-600">{formatNaira(due.amount)}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${display.className}`}
+                        >
+                          {display.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {due.certificate ? (
+                          <a
+                            href={`/verify/${due.certificate.qrToken}`}
+                            className="text-slate-700 underline"
+                          >
+                            View
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </DashboardShell>
   );
 }

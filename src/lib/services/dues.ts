@@ -63,6 +63,7 @@ export async function listDuesForViewer(
       year,
       status: filters.status,
       tenant: {
+        userId: null, // excludes landlord-occupied units — see listLandlordUnitDues
         status: "active",
         livingSpaceTypeId: filters.livingSpaceTypeId,
         houseId: filters.houseId,
@@ -86,9 +87,9 @@ export async function getPaymentDashboardTotals(session: SessionPayload, year: n
   const landlordId = session.role === Role.LANDLORD ? await ownLandlordId(session) : undefined;
 
   const [totalActiveTenants, dues] = await Promise.all([
-    prisma.tenant.count({ where: { status: "active", house: { landlordId } } }),
+    prisma.tenant.count({ where: { userId: null, status: "active", house: { landlordId } } }),
     prisma.tenantDue.findMany({
-      where: { year, tenant: { status: "active", house: { landlordId } } },
+      where: { year, tenant: { userId: null, status: "active", house: { landlordId } } },
     }),
   ]);
 
@@ -113,18 +114,20 @@ export async function getPaymentDashboardTotals(session: SessionPayload, year: n
   };
 }
 
-// Tenant-only, own due, and only while it's still outstanding — matches the
-// "shown when outstanding" screen note in docs/phase-0-discovery.md §7.
+// Own due only, and only while it's still outstanding — matches the "shown
+// when outstanding" screen note in docs/phase-0-discovery.md §7. Takes an
+// explicit tenantId rather than a session/role, same as
+// submitBankTransferPayment in payments.ts — a Landlord managing their own
+// occupied unit (see createOwnUnitForLandlord in tenants.ts) uses this the
+// same way a Tenant session does; the caller is responsible for resolving
+// which tenantId it's allowed to act as.
 export async function setExpectedPaymentDate(
-  session: SessionPayload,
+  tenantId: string,
   tenantDueId: string,
   date: Date | null
 ) {
-  if (session.role !== Role.TENANT || !session.tenantId) {
-    throw new Error("Only a tenant can set their own expected payment date.");
-  }
   const due = await prisma.tenantDue.findUniqueOrThrow({ where: { id: tenantDueId } });
-  if (due.tenantId !== session.tenantId) {
+  if (due.tenantId !== tenantId) {
     throw new Error("You can only update your own due.");
   }
   if (due.status !== "NOT_PAID" && due.status !== "REJECTED") {
@@ -154,6 +157,25 @@ export async function listCashEligibleDues(estateId: string, year: number) {
     a.tenant.house.houseNumber.localeCompare(b.tenant.house.houseNumber) ||
     a.tenant.fullName.localeCompare(b.tenant.fullName)
   );
+}
+
+// Admin-only breakout of landlord-occupied units, kept separate from every
+// other dues/totals function here on purpose (see the comment on
+// listTenantsForViewer in tenants.ts) so landlord compliance never quietly
+// blends into tenant compliance numbers.
+export async function listLandlordUnitDues(estateId: string, year: number) {
+  const dues = await prisma.tenantDue.findMany({
+    where: {
+      year,
+      tenant: { userId: { not: null }, status: "active", house: { estateId } },
+    },
+    include: {
+      tenant: { include: { house: { include: { landlord: true } }, livingSpaceType: true } },
+      certificate: true,
+    },
+  });
+
+  return dues.sort((a, b) => a.tenant.house.houseNumber.localeCompare(b.tenant.house.houseNumber));
 }
 
 export function getDueForTenantYear(tenantId: string, year: number) {

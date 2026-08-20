@@ -8,11 +8,20 @@ import { ownLandlordId } from "./viewer-scope";
 // ADMIN sees every tenant in the estate; LANDLORD sees only tenants in their
 // own houses — see docs/phase-0-discovery.md §6. `status` narrows to just
 // "active" or "inactive" tenants; omitted, every tenant is returned.
+//
+// Always excludes a landlord's own occupied unit (Tenant.userId set — see
+// createOwnUnitForLandlord below). Regular tenant rows never have userId
+// set, so this is a clean, unambiguous split with no extra flag to keep in
+// sync. Landlord-occupied units are broken out separately (see
+// listLandlordUnitsForAdmin / getOwnUnitForLandlord) so the committee can
+// tell tenant compliance from landlord compliance at a glance, rather than
+// having landlord units silently blend into tenant counts.
 export async function listTenantsForViewer(
   session: SessionPayload,
   filters: { status?: "active" | "inactive" } = {}
 ) {
   const where = {
+    userId: null,
     ...(session.role === Role.ADMIN ? {} : { house: { landlordId: await ownLandlordId(session) } }),
     ...(filters.status ? { status: filters.status } : {}),
   };
@@ -62,6 +71,49 @@ export async function createTenant(
       phone: input.phone,
       moveInDate: input.moveInDate,
       tenantCode,
+    },
+  });
+}
+
+// A landlord's own occupied unit is a Tenant row like any other — same
+// dues/payment/certificate/gate-lookup machinery, no changes needed to any
+// of that pipeline — but linked to the landlord's own User account instead
+// of left unlinked, so they manage it from their existing Landlord login
+// rather than a separate House Code + Tenant Code. Not every landlord
+// occupies their own house, so this is opt-in, not automatic.
+export async function getOwnUnitForLandlord(session: SessionPayload) {
+  return prisma.tenant.findFirst({
+    where: { userId: session.userId },
+    include: { house: true, livingSpaceType: true },
+  });
+}
+
+export async function createOwnUnitForLandlord(
+  session: SessionPayload,
+  input: { houseId: string; livingSpaceTypeId: string; moveInDate: Date }
+) {
+  if (session.role !== Role.LANDLORD) {
+    throw new Error("Only a landlord can add their own unit.");
+  }
+  await assertHouseIsOwnedByViewer(session, input.houseId);
+
+  const existing = await getOwnUnitForLandlord(session);
+  if (existing) {
+    throw new Error("You already have a unit registered.");
+  }
+
+  const landlord = await prisma.landlord.findUniqueOrThrow({ where: { userId: session.userId } });
+  const tenantCode = await uniqueTenantCode();
+
+  return prisma.tenant.create({
+    data: {
+      houseId: input.houseId,
+      livingSpaceTypeId: input.livingSpaceTypeId,
+      fullName: landlord.fullName,
+      phone: landlord.phone,
+      moveInDate: input.moveInDate,
+      tenantCode,
+      userId: session.userId,
     },
   });
 }

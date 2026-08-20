@@ -7,16 +7,21 @@ import { Role } from "@/generated/prisma/enums";
 // gated the same way it would be behind a signed object-storage URL: only
 // Admin, or the tenant who submitted it, can fetch it. See
 // docs/phase-0-discovery.md §3 ("Proof-of-payment storage cost/privacy").
+//
+// Catch-all segment: stored keys are "proofs/<uuid>.<ext>" (see saveFile in
+// storage.ts) — a plain [key] segment can't match a path containing a
+// slash, so every proof link 404'd before reaching any of the logic below.
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ key: string }> }
+  { params }: { params: Promise<{ key: string[] }> }
 ) {
   const session = await getSession();
   if (!session) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const { key } = await params;
+  const { key: keyParts } = await params;
+  const key = keyParts.join("/");
   const payment = await prisma.payment.findFirst({
     where: { proofFileUrl: key },
     include: { tenantDue: true },

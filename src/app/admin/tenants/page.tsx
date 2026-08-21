@@ -22,9 +22,10 @@ export default async function AdminTenantsPage({
   const estate = await getEstate();
   const sp = await searchParams;
   const status = param(sp, "status") === "inactive" ? "inactive" : "active";
+  const houseId = param(sp, "houseId");
 
   const [tenants, houses, spaceTypes] = await Promise.all([
-    listTenantsForViewer(session, { status }),
+    listTenantsForViewer(session, { status, houseId }),
     listHousesForViewer(session),
     estate ? listLivingSpaceTypes(estate.id) : Promise.resolve([]),
   ]);
@@ -36,7 +37,25 @@ export default async function AdminTenantsPage({
         {status === "active" ? "Active" : "Inactive"} tenants across the estate.
       </p>
 
-      <form method="get" className="mt-6 flex items-end gap-3">
+      <form method="get" className="mt-6 flex flex-wrap items-end gap-3">
+        <div>
+          <label htmlFor="houseId" className="block text-sm font-medium text-slate-700">
+            House
+          </label>
+          <select
+            id="houseId"
+            name="houseId"
+            defaultValue={houseId ?? ""}
+            className="mt-1 block rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          >
+            <option value="">All houses</option>
+            {houses.map((h) => (
+              <option key={h.id} value={h.id}>
+                {h.houseNumber}
+              </option>
+            ))}
+          </select>
+        </div>
         <div>
           <label htmlFor="status" className="block text-sm font-medium text-slate-700">
             Status
@@ -57,6 +76,11 @@ export default async function AdminTenantsPage({
         >
           Filter
         </button>
+        {houseId && (
+          <a href="/admin/tenants" className="text-sm text-slate-500 hover:underline">
+            Clear filters
+          </a>
+        )}
       </form>
 
       <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">

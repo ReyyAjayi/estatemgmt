@@ -18,12 +18,13 @@ import { ownLandlordId } from "./viewer-scope";
 // having landlord units silently blend into tenant counts.
 export async function listTenantsForViewer(
   session: SessionPayload,
-  filters: { status?: "active" | "inactive" } = {}
+  filters: { status?: "active" | "inactive"; houseId?: string } = {}
 ) {
   const where = {
     userId: null,
     ...(session.role === Role.ADMIN ? {} : { house: { landlordId: await ownLandlordId(session) } }),
     ...(filters.status ? { status: filters.status } : {}),
+    ...(filters.houseId ? { houseId: filters.houseId } : {}),
   };
 
   return prisma.tenant.findMany({

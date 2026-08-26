@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth-guard";
 import { Role } from "@/generated/prisma/enums";
 import { getEstate } from "@/lib/estate";
@@ -49,14 +50,12 @@ export default async function PaymentReviewPage() {
                 <td className="px-4 py-3 text-slate-600">{payment.referenceNumber ?? "—"}</td>
                 <td className="px-4 py-3">
                   {payment.proofFileUrl ? (
-                    <a
-                      href={`/api/proofs/${payment.proofFileUrl}`}
-                      target="_blank"
-                      rel="noreferrer"
+                    <Link
+                      href={`/admin/payments/proof/${payment.proofFileUrl}`}
                       className="text-slate-700 underline"
                     >
                       View
-                    </a>
+                    </Link>
                   ) : (
                     <span className="text-slate-400">—</span>
                   )}

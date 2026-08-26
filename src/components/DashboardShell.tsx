@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { logout } from "@/app/logout/actions";
 import { getLatestAnnouncement } from "@/lib/services/announcements";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { PushSubscribePrompt } from "@/components/PushSubscribePrompt";
+import { NavLinks } from "@/components/NavLinks";
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Admin",
@@ -69,19 +69,7 @@ export async function DashboardShell({
             </button>
           </form>
         </div>
-        {navItems.length > 1 && (
-          <nav className="flex gap-4 overflow-x-auto px-4 pb-3 text-sm sm:px-6">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="whitespace-nowrap text-slate-600 hover:text-slate-900 hover:underline"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        )}
+        {navItems.length > 1 && <NavLinks items={navItems} />}
       </header>
       <AnnouncementBanner
         announcement={

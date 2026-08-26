@@ -70,9 +70,10 @@ model User {
   tenant   Tenant?
   security Security?
 
-  validatedPayments    Payment[]     @relation("ValidatedBy")
-  issuedCertificates   Certificate[] @relation("IssuedBy")
-  deactivationRequests Tenant[]      @relation("DeactivationRequestedBy")
+  validatedPayments    Payment[]      @relation("ValidatedBy")
+  issuedCertificates   Certificate[]  @relation("IssuedBy")
+  deactivationRequests Tenant[]       @relation("DeactivationRequestedBy")
+  announcements        Announcement[] @relation("AnnouncementPostedBy")
 }
 
 model LivingSpaceType {
@@ -207,4 +208,33 @@ model Certificate {
   issuedAt          DateTime  @default(now())
   issuedById        String
   issuedBy          User      @relation("IssuedBy", fields: [issuedById], references: [id])
+}
+
+// Single-estate MVP, same as Estate itself -- no estateId scoping needed
+// (see the comment on Estate above). Broadcasts to every role in v1; no
+// per-announcement targeting yet.
+model Announcement {
+  id         String   @id @default(cuid())
+  message    String
+  postedAt   DateTime @default(now())
+  postedById String
+  postedBy   User     @relation("AnnouncementPostedBy", fields: [postedById], references: [id])
+}
+
+// One row per subscribed browser/device, not per person -- someone with two
+// phones gets two rows, which is correct (each needs its own push). role +
+// subjectId are informational only (no FK: subjectId is a Tenant.id for
+// TENANT and a User.id for every other role, and Prisma can't express a
+// "depends on the sibling field" FK) -- kept for future per-role targeting,
+// unused by v1's broadcast-to-everyone send. endpoint is the real identity:
+// a browser's push endpoint is unique per installation, so subscribing
+// again from the same device safely upserts rather than duplicating.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  role      Role
+  subjectId String
+  createdAt DateTime @default(now())
 }

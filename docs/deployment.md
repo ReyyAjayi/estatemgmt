@@ -8,6 +8,7 @@ Both items previously flagged as blockers now have code support — what's left 
 
 1. **Proof-of-payment & signature storage** (`PRODUCT_DECISIONS.md` #25). `src/lib/storage.ts` supports an S3-compatible object-storage backend (Cloudflare R2, Supabase Storage, and AWS S3 all work unchanged — same API, just different endpoint/credentials), selected automatically when the `S3_*` environment variables below are set. **Without them, it falls back to local disk**, which works for development but **will not work on Vercel** — its filesystem is ephemeral and mostly read-only outside `/tmp`. You need to pick a provider, create a bucket, and set the env vars before deploying. Cloudflare R2 is the recommendation (zero egress fees, generous free tier, S3-compatible); Supabase Storage is a reasonable alternative if you're already using Supabase for Postgres.
 2. **Chairman name/signature on certificates** (`PRODUCT_DECISIONS.md` #39). Admin can now set both from **Settings** in the Admin nav (`/admin/settings`) — no code change needed, just log in as Admin and fill it in. Certificates render without a signature line until you do.
+3. **Push notifications for Admin announcements**. Optional — without the VAPID env vars below, Admin can still post an announcement and everyone sees it as an in-app banner next time they open the app; it just isn't pushed to devices that enabled notifications. Generate a keypair once with `npx web-push generate-vapid-keys` and set the three env vars from it (step 4).
 
 ## Also worth knowing before higher-traffic production use
 
@@ -29,6 +30,7 @@ Both items previously flagged as blockers now have code support — what's left 
    - `DATABASE_URL` (and `DIRECT_URL` if applicable) — from step 2.
    - `SESSION_SECRET` — a long random string (32+ characters) used to sign session cookies. Generate one with `openssl rand -base64 32`. Do not reuse the local `.env` value.
    - `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT` (omit for real AWS S3), `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` — from step 3. See `.env.example` for the exact names.
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_CONTACT_EMAIL` — optional, for push notifications on announcements. Generate a keypair with `npx web-push generate-vapid-keys` and use its `publicKey`/`privateKey` output; `VAPID_CONTACT_EMAIL` is any address the push services can contact you at if they need to (not shown to residents). `NEXT_PUBLIC_VAPID_PUBLIC_KEY` is inlined into the client bundle at build time, so set it before deploying, not after.
 5. **Run migrations against the production database** before the first deploy (or as part of your deploy pipeline):
    ```bash
    DATABASE_URL="<production-url>" DIRECT_URL="<direct-url-if-applicable>" npm run db:migrate:deploy

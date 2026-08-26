@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { logout } from "@/app/logout/actions";
+import { getLatestAnnouncement } from "@/lib/services/announcements";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { PushSubscribePrompt } from "@/components/PushSubscribePrompt";
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Admin",
@@ -18,6 +21,7 @@ const NAV_ITEMS: Record<string, { href: string; label: string }[]> = {
     { href: "/admin/admins", label: "Admins" },
     { href: "/admin/tenants", label: "Tenants" },
     { href: "/admin/space-types", label: "Space types & fees" },
+    { href: "/admin/announcements", label: "Announcements" },
     { href: "/admin/settings", label: "Settings" },
   ],
   LANDLORD: [
@@ -31,7 +35,7 @@ const NAV_ITEMS: Record<string, { href: string; label: string }[]> = {
   SECURITY: [{ href: "/security", label: "Dashboard" }],
 };
 
-export function DashboardShell({
+export async function DashboardShell({
   estateName,
   role,
   personName = "",
@@ -43,6 +47,7 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const navItems = NAV_ITEMS[role] ?? [];
+  const announcement = await getLatestAnnouncement();
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -78,6 +83,14 @@ export function DashboardShell({
           </nav>
         )}
       </header>
+      <AnnouncementBanner
+        announcement={
+          announcement
+            ? { id: announcement.id, message: announcement.message, postedAt: announcement.postedAt.toISOString() }
+            : null
+        }
+      />
+      <PushSubscribePrompt />
       <main className="px-4 py-8 sm:px-6">{children}</main>
     </div>
   );
